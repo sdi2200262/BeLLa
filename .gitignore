@@ -1,0 +1,17 @@
+#ignore sensitive information and files
+# Ignore virtual environments
+venv/
+
+# Ignore environment variables
+.env
+
+# Ignore SQLite database
+app/data/data.db
+
+# Ignore compiled Python files
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignore uploaded files
+uploads/

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BeLLa MVP</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="logo-container">
+        <h1 class="logo">BeLLa</h1>
+        <h2 class="subtitle">Better Large Language</h2>
+    </div>
+    
+    <div class="main-content">
+        <form action="/upload" method="post" enctype="multipart/form-data">
+            <label for="file">Upload a Dataset:</label>
+            <input type="file" name="file" id="file">
+            <button type="submit">Upload</button>
+        </form>
+        
+        <a href="{{ url_for('discussion') }}">
+            <button type="button">Go to Discussion Board</button>
+        </a>
+    </div>
+</body>
+</html>

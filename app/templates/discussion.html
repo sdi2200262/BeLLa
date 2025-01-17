@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BeLLa Discussion</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Discussion Board</h1>
+    <form action="/discussion" method="post">
+        <input type="text" name="message" placeholder="Enter your message" required>
+        <button type="submit">Post</button>
+    </form>
+    <ul>
+        {% for msg in messages %}
+            <li>{{ msg }}</li>
+        {% endfor %}
+    </ul>
+    
+    <a href="{{ url_for('home') }}">
+        <button type="button">Back to Home</button>
+    </a>
+</body>
+</html>
