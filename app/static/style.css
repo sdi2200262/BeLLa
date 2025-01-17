@@ -1,191 +1,152 @@
-body {
-    font-family: 'Segoe UI', Arial, sans-serif;
-    text-align: center;
+/* Reset and base styles */
+* {
     margin: 0;
-    padding: 20px;
-    background-color: #000000;
-    color: #ffffff;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+body {
+    background-color: #000;
+    color: #fff;
     line-height: 1.6;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
 }
 
-.logo-container {
-    margin-top: 80px;
-    margin-bottom: 40px;
+/* Typography */
+h1 {
+    font-size: 3rem;
+    font-weight: 700;
+    margin-bottom: 2rem;
+    letter-spacing: -0.5px;
 }
 
-.logo {
-    font-size: 4em;
-    font-weight: 800;
-    color: #ffffff;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    margin-bottom: 10px;
-}
-
-.subtitle {
-    font-size: 1.8em;
+h2 {
+    font-size: 2rem;
     font-weight: 600;
-    color: #ffffff;
-    letter-spacing: 1px;
+    margin: 2rem 0 1rem;
+    letter-spacing: -0.3px;
 }
 
-.uploads-container {
-    margin-top: 20px;
-    width: 80%;
-    max-width: 600px;
-    margin-left: auto;
-    margin-right: auto;
+p {
+    font-size: 1.1rem;
+    color: #999;
+    margin-bottom: 1.5rem;
 }
 
-.file-list {
-    max-height: 300px;
-    overflow-y: auto;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    padding: 10px;
-}
-
-.uploaded-image {
-    max-width: 200px;
-    max-height: 200px;
-    object-fit: contain;
-    margin: 10px 0;
-}
-
-.file-item {
-    margin: 10px 0;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-}
-
-.file-item a {
-    color: #007bff;
-    text-decoration: none;
-    margin-left: 10px;
-}
-
-.file-item a:hover {
-    text-decoration: underline;
-}
-
-form {
-    margin: 40px auto;
-    max-width: 600px;
-}
-
-button {
-    background-color: #007BFF;
-    color: white;
-    border: none;
-    padding: 12px 25px;
-    cursor: pointer;
-    font-weight: 600;
-    border-radius: 5px;
-    font-size: 1.1em;
-    transition: all 0.3s ease;
-    margin: 10px;
-}
-
-button:hover {
-    background-color: #0056b3;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
-}
-
+/* Links */
 a {
-    color: #ffffff;
+    color: #0A84FF;
     text-decoration: none;
+    font-size: 1.1rem;
+    transition: opacity 0.2s ease;
 }
 
-label {
-    color: #ffffff;
-    font-size: 1.2em;
-    font-weight: 600;
-    display: block;
-    margin-bottom: 10px;
+a:hover {
+    opacity: 0.8;
+}
+
+/* Form elements */
+form {
+    margin: 2rem 0;
 }
 
 input[type="file"] {
-    background-color: #1a1a1a;
-    color: #ffffff;
-    padding: 10px;
-    border-radius: 5px;
-    border: 2px solid #333;
-    margin: 10px 0;
+    background: #1C1C1E;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #333;
+    color: #fff;
+    width: 100%;
+    margin-bottom: 1rem;
 }
 
-h1, h2 {
-    font-weight: 700;
-    color: #ffffff;
-    margin-bottom: 30px;
+button {
+    background: #0A84FF;
+    color: #fff;
+    border: none;
+    padding: 0.8rem 1.5rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.2s ease;
 }
 
-ul {
+button:hover {
+    background: #0070E0;
+}
+
+/* File list */
+.file-list {
+    background: #1C1C1E;
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin: 1rem 0;
+}
+
+.file-list ul {
     list-style: none;
-    padding: 0;
-    margin: 30px auto;
-    max-width: 800px;
 }
 
-li {
-    background-color: #1a1a1a;
-    margin: 10px 0;
-    padding: 15px;
-    border-radius: 5px;
-    font-weight: 500;
+.file-list li {
+    padding: 0.8rem 0;
+    border-bottom: 1px solid #333;
+    color: #fff;
 }
 
-input[type="text"] {
-    width: 80%;
-    padding: 12px;
-    margin: 10px 0;
-    border: none;
-    border-radius: 5px;
-    background-color: #1a1a1a;
-    color: #ffffff;
-    font-size: 1em;
+.file-list li:last-child {
+    border-bottom: none;
 }
 
-.file-types-note {
-    color: #ffffff;
-    font-size: 0.9em;
-    margin-top: 5px;
-    margin-bottom: 15px;
+/* Popup messages */
+#popup {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: #1C1C1E;
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    animation: slideIn 0.3s ease;
 }
 
-.error-message {
-    background-color: #ff4c4c;
-    color: #ffffff;
-    padding: 10px;
-    border-radius: 5px;
-    margin: 20px auto;
-    max-width: 600px;
-    text-align: center;
+#popup p {
+    margin: 0;
+    color: #fff;
 }
 
-.error-message button {
-    background-color: #ffffff;
-    color: #ff4c4c;
-    border: none;
-    padding: 5px 10px;
-    cursor: pointer;
-    font-weight: bold;
-    border-radius: 3px;
-    margin-left: 10px;
+#popup button {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
 }
 
-#errorMessage {
-    display: none;
+@keyframes slideIn {
+    from {
+        transform: translateY(100px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
 }
 
-#removeFileButton {
-    background-color: #ff4c4c;
-    color: #ffffff;
-    border: none;
-    padding: 5px 10px;
-    cursor: pointer;
-    font-weight: bold;
-    border-radius: 3px;
-    margin-left: 10px;
+/* Responsive design */
+@media (max-width: 768px) {
+    body {
+        padding: 1rem;
+    }
+
+    h1 {
+        font-size: 2.5rem;
+    }
+
+    h2 {
+        font-size: 1.8rem;
+    }
 }

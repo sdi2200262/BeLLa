@@ -13,5 +13,9 @@ __pycache__/
 *.pyc
 *.pyo
 
-# Ignore uploaded files
-uploads/
+#ignore uploaded files
+app/uploads/
+
+# Ignore other system files
+.DS_Store
+Thumbs.db

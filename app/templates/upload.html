@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BeLLa - Uploads</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <h1>Uploads</h1>
+    <form action="/upload" method="post" enctype="multipart/form-data">
+        <input type="file" name="file" required>
+        <button type="submit">Upload</button>
+    </form>
+    <a href="/">Back to Home</a>
+
+    <h2>Uploaded Files</h2>
+    <div class="file-list">
+        {% if files %}
+            <ul>
+                {% for file in files %}
+                    <li>{{ file }}</li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No files have been uploaded yet.</p>
+        {% endif %}
+    </div>
+
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div id="popup">
+                <p>{{ messages[0] }}</p>
+                <button onclick="closePopup()">Close</button>
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <script>
+        function closePopup() {
+            document.getElementById('popup').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
