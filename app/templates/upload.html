@@ -7,19 +7,67 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+    <div class="breadcrumb">
+        <a href="/" class="breadcrumb-link" ">/Home</a><a href="/upload" class="breadcrumb-link" ">/Upload</a>
+    </div>
     <h1>Uploads</h1>
-    <form action="/upload" method="post" enctype="multipart/form-data">
-        <input type="file" name="file" required>
-        <button type="submit">Upload</button>
-    </form>
-    <a href="/">Back to Home</a>
+    <button onclick="toggleUploadForm()" class="upload-btn">Upload File</button>
+    <div id="uploadForm" style="display: none;">
+        <form action="/upload" method="post" enctype="multipart/form-data">
+            <div class="upload-section">
+                <label for="file">Select File to Upload:</label>
+                <input type="file" id="file" name="file" required>
+                <!-- only images will be supported for now -->
+                <small>Supported formats: .png, .jpg, .jpeg, .gif, .webp</small>
+                <!-- add vertical spacing  -->
+                <br>
+                <br>
+                
+            </div>
+            
+            <div class="readme-section">
+                <label>Add Documentation:</label>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <div>
+                        <input type="radio" id="uploadReadme" name="readmeChoice" value="upload" onclick="toggleReadmeOptions()" style="appearance: none; width: 16px; height: 16px; border: 1px solid #666; border-radius: 3px; background: #333; position: relative; cursor: pointer;">
+                        <label for="uploadReadme">Upload README file</label>
+                        <div id="readmeFileSection" style="display: none;">
+                            <input type="file" id="readmeFile" name="readmeFile" accept=".txt,.md">
+                            <small>Supported formats: .txt, .md</small>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <input type="radio" id="writeReadme" name="readmeChoice" value="write" onclick="toggleReadmeOptions()" style="appearance: none; width: 16px; height: 16px; border: 1px solid #666; border-radius: 3px; background: #333; position: relative; cursor: pointer;">
+                        <label for="writeReadme">Write ReadMe</label>
+                        <div id="readmeTextSection" style="display: none;">
+                            <textarea id="readmeText" name="readmeText" rows="5" style="width: 100%;" placeholder="Describe your upload here..."></textarea>
+                        </div>
+                    </div>
+
+                    <div>
+                        <input type="radio" id="noReadme" name="readmeChoice" value="none" onclick="toggleReadmeOptions()" style="appearance: none; width: 16px; height: 16px; border: 1px solid #666; border-radius: 3px; background: #333; position: relative; cursor: pointer;">
+                        <label for="noReadme">No Documentation</label>
+                    </div>
+                </div>
+            </div>
+            
+            <br>
+            <button type="submit" class="submit-btn">Upload</button>
+        </form>
+    </div>
 
     <h2>Uploaded Files</h2>
     <div class="file-list">
         {% if files %}
             <ul>
                 {% for file in files %}
-                    <li>{{ file }}</li>
+                    <li onclick="openFileView('{{ file.name }}')">
+                        {{ file.name }}
+                        {% if file.has_readme %}
+                            <span class="readme-indicator" title="Has documentation">📄</span>
+                        {% endif %}
+                    </li>
                 {% endfor %}
             </ul>
         {% else %}
@@ -40,6 +88,62 @@
         function closePopup() {
             document.getElementById('popup').style.display = 'none';
         }
+
+        function toggleUploadDropdown() {
+            const dropdown = document.getElementById('uploadDropdown');
+            dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function openFileView(fileName) {
+            window.location.href = `/file-view/${fileName}`; // Update with the correct file view URL
+        }
+
+        function toggleUploadForm() {
+            const uploadForm = document.getElementById('uploadForm');
+            uploadForm.style.display = uploadForm.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function toggleReadmeOptions() {
+            const readmeFileSection = document.getElementById('readmeFileSection');
+            const readmeTextSection = document.getElementById('readmeTextSection');
+            const uploadReadme = document.getElementById('uploadReadme');
+            const writeReadme = document.getElementById('writeReadme');
+            const noReadme = document.getElementById('noReadme');
+            
+            // Get the clicked radio button
+            const clickedRadio = document.querySelector('input[name="readmeChoice"]:checked');
+            
+            // If a radio is clicked twice, uncheck it
+            if (clickedRadio && clickedRadio._previouslyChecked) {
+                clickedRadio.checked = false;
+                clickedRadio._previouslyChecked = false;
+            } else if (clickedRadio) {
+                // Mark this radio as previously checked
+                document.querySelectorAll('input[name="readmeChoice"]').forEach(radio => {
+                    radio._previouslyChecked = false;
+                });
+                clickedRadio._previouslyChecked = true;
+            }
+            
+            // Clear inputs and hide sections if nothing is selected
+            if (!uploadReadme.checked && !writeReadme.checked && !noReadme.checked) {
+                document.getElementById('readmeFile').value = '';
+                document.getElementById('readmeText').value = '';
+                readmeFileSection.style.display = 'none';
+                readmeTextSection.style.display = 'none';
+                return;
+            }
+            
+            // Clear inputs when switching to "no readme"
+            if (noReadme.checked) {
+                document.getElementById('readmeFile').value = '';
+                document.getElementById('readmeText').value = '';
+            }
+            
+            readmeFileSection.style.display = uploadReadme.checked ? 'block' : 'none';
+            readmeTextSection.style.display = writeReadme.checked ? 'block' : 'none';
+        }
     </script>
 </body>
 </html>
+    

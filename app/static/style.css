@@ -78,6 +78,22 @@ button:hover {
     background: #0070E0;
 }
 
+/* New button styling */
+.upload-btn {
+    background: #0A84FF; /* Button background color */
+    color: #fff; /* Text color */
+    border: none; /* No border */
+    padding: 0.8rem 1.5rem; /* Padding for the button */
+    border-radius: 8px; /* Rounded corners */
+    font-size: 1rem; /* Font size */
+    cursor: pointer; /* Pointer cursor on hover */
+    transition: background 0.2s ease; /* Transition effect */
+}
+
+.upload-btn:hover {
+    background: #0070E0; /* Background color on hover */
+}
+
 /* File list */
 .file-list {
     background: #1C1C1E;
@@ -150,3 +166,85 @@ button:hover {
         font-size: 1.8rem;
     }
 }
+
+.breadcrumb {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.breadcrumb-link {
+    color: #fff;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.breadcrumb-link:hover {
+    color: #0A84FF;
+}
+
+.breadcrumb-separator {
+    color: #fff;
+    margin: 0 0.5rem;
+}
+
+/* Radio buttons and form sections */
+input[type="radio"] {
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border: 1px solid #666;
+    border-radius: 3px;
+    background: #333;
+    position: relative;
+    cursor: pointer;
+    margin-right: 8px;
+}
+
+input[type="radio"]:checked {
+    background: #1C1C1E;
+    border-color: #0A84FF;
+}
+
+input[type="radio"]:checked::after {
+    content: "✓";
+    position: absolute;
+    color: #0A84FF;
+    font-size: 14px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+#uploadForm {
+    background: #1C1C1E;
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin-top: 1rem;
+}
+
+#readmeFileSection, #readmeTextSection {
+    margin-top: 0.5rem;
+    margin-left: 1.5rem;
+    padding: 0.5rem;
+    background: rgba(26, 26, 28, 0.5);
+    border-radius: 8px;
+}
+
+textarea {
+    background: #333;
+    color: #fff;
+    border: 1px solid #666;
+    border-radius: 8px;
+    padding: 0.8rem;
+    resize: vertical;
+}
+
+textarea:focus {
+    outline: none;
+    border-color: #0A84FF;
+}
+
+#uploadDropdown {
+    display: none;
+}
+
