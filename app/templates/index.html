@@ -13,15 +13,70 @@
     </div>
     
     <div class="main-content">
-        <form action="/upload" method="post" enctype="multipart/form-data">
+        <form id="uploadForm" action="/upload" method="post" enctype="multipart/form-data">
             <label for="file">Upload a Dataset:</label>
-            <input type="file" name="file" id="file">
+            <input type="file" name="file" id="file" onchange="handleFileSelect(event)">
+            <button type="button" id="removeFileButton" onclick="removeFile()" style="display:none;">X</button>
+            <p class="file-types-note">Compatible file types: .png, .jpg, .jpeg, .gif, .bmp</p>
             <button type="submit">Upload</button>
         </form>
+        
+        <div id="errorMessage" class="error-message" style="display:none;">
+            <span id="errorText"></span>
+            <button onclick="closeErrorMessage()">Close</button>
+        </div>
         
         <a href="{{ url_for('discussion') }}">
             <button type="button">Go to Discussion Board</button>
         </a>
+
+        <div class="uploads-container">
+            <h3>Uploaded Files</h3>
+            <div class="file-list">
+                {% for file in files %}
+                <div class="file-item">
+                    <img src="{{ url_for('static', filename='uploads/' + file) }}" alt="{{ file }}" class="uploaded-image">
+                    <span>{{ file }}</span>
+                    <a href="{{ url_for('static', filename='uploads/' + file) }}" target="_blank">View/Download</a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
     </div>
+
+    <script>
+        function handleFileSelect(event) {
+            const fileInput = document.getElementById('file');
+            const removeButton = document.getElementById('removeFileButton');
+            if (fileInput.files.length > 0) {
+                removeButton.style.display = 'inline';
+            } else {
+                removeButton.style.display = 'none';
+            }
+        }
+
+        function removeFile() {
+            const fileInput = document.getElementById('file');
+            fileInput.value = '';
+            document.getElementById('removeFileButton').style.display = 'none';
+        }
+
+        function closeErrorMessage() {
+            document.getElementById('errorMessage').style.display = 'none';
+        }
+
+        document.getElementById('uploadForm').onsubmit = function(event) {
+            const fileInput = document.getElementById('file');
+            if (!fileInput.value.toLowerCase().endsWith('.png') && 
+                !fileInput.value.toLowerCase().endsWith('.jpg') && 
+                !fileInput.value.toLowerCase().endsWith('.jpeg') && 
+                !fileInput.value.toLowerCase().endsWith('.gif') && 
+                !fileInput.value.toLowerCase().endsWith('.bmp')) {
+                event.preventDefault();
+                document.getElementById('errorText').innerText = 'Invalid file type! Only image files are allowed.';
+                document.getElementById('errorMessage').style.display = 'block';
+            }
+        }
+    </script>
 </body>
 </html>

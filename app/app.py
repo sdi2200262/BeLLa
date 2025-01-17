@@ -6,24 +6,28 @@ import sqlite3  # Added SQLite support
 app = Flask(__name__)
 
 # Set up the upload folder
-UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')  # Changes for file uploads
+UPLOAD_FOLDER = os.path.join(os.getcwd(), 'static', 'uploads')  # Path to be inside static folder
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 @app.route('/')
 def home():
-    return render_template('index.html')  # Loads the homepage
+    # Get list of files in the upload directory
+    files = os.listdir(app.config['UPLOAD_FOLDER'])
+    # Filter to include only image files
+    files = [f for f in files if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp'))]
+    return render_template('index.html', files=files)  # Pass files to template
 
 # File upload route
 @app.route('/upload', methods=['POST'])
 def upload():
     file = request.files['file']
-    if file:
+    if file and file.filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp')):
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
         file.save(filepath)
         return render_template('upload_success.html', filename=file.filename)  # Show success page
-    return "No file selected!", 400
+    return "Invalid file type! Only image files are allowed.", 400
 
 # Discussion board route with SQLite
 @app.route('/discussion', methods=['GET', 'POST'])
