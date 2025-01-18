@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BeLLa - File View</title>
+    <link rel="stylesheet" href="/static/style.css">
+    
+    <!-- Add markdown-it for README rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/markdown-it/13.0.1/markdown-it.min.js"></script>
+</head>
+
+<body>
+    <!-- breadcrumb navigation -->
+    <div class="breadcrumb">
+        <a href="/" class="breadcrumb-link">/Home</a><a href="/upload" class="breadcrumb-link">/Upload</a><a href="#" class="breadcrumb-link">/{{ file.name }}</a>
+    </div>
+
+    <div class="file-view-container">
+        <!-- File info section -->
+        <div class="file-info">
+            <!-- File type logo -->
+            <div class="file-type-logo">
+                {% if file.type == 'image' %}
+                    🖼️
+                {% else %}
+                    📄
+                {% endif %}
+            </div>
+            
+            <!-- File name -->
+            <h2 class="file-name">{{ file.name }}</h2>
+            
+            <!-- Action buttons -->
+            <div class="file-actions">
+                <button onclick="viewFile('{{ file.name }}')" class="action-btn view-btn">
+                    View File
+                </button>
+                <button onclick="downloadFile('{{ file.name }}')" class="action-btn download-btn">
+                    Download File
+                </button>
+            </div>
+        </div>
+
+        <!-- Documentation section -->
+        {% if file.has_readme %}
+            <div id="readme-content" class="markdown-body">
+                {{ readme_content|safe }}
+            </div>
+        {% endif %}
+    </div>
+
+    <script>
+        // Function to view file
+        function viewFile(fileName) {
+            window.open(`/uploads/${fileName}`, '_blank');
+        }
+
+        // Function to download file
+        function downloadFile(fileName) {
+            window.location.href = `/download/${fileName}`;
+        }
+
+        // Initialize markdown renderer if readme exists
+        if (document.getElementById('readme-content')) {
+            const md = window.markdownit({
+                html: true,
+                linkify: true,
+                typographer: true
+            });
+            const content = document.getElementById('readme-content').textContent;
+            document.getElementById('readme-content').innerHTML = md.render(content);
+        }
+    </script>
+</body>
+</html> 

@@ -104,16 +104,30 @@ button:hover {
 
 .file-list ul {
     list-style: none;
+    padding: 0;
 }
 
-.file-list li {
-    padding: 0.8rem 0;
-    border-bottom: 1px solid #333;
+.file-item {
+    padding: 10px;
+    margin: 5px 0;
+    background-color: #333;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.file-item:hover {
+    background-color: #444;
+}
+
+.file-name {
     color: #fff;
 }
 
-.file-list li:last-child {
-    border-bottom: none;
+.readme-indicator {
+    margin-left: 10px;
 }
 
 /* Popup messages */
@@ -246,5 +260,172 @@ textarea:focus {
 
 #uploadDropdown {
     display: none;
+}
+
+/* File View Styles */
+.file-view-container {
+    background: #1C1C1E;
+    padding: 2rem;
+    border-radius: 12px;
+    margin-top: 2rem;
+}
+
+.file-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.file-type-logo {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.file-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.action-btn {
+    padding: 0.8rem 1.5rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.view-btn {
+    background: #0A84FF;
+    color: #fff;
+    border: none;
+}
+
+.view-btn:hover {
+    background: #0070E0;
+}
+
+.download-btn {
+    background: #333;
+    color: #fff;
+    border: 1px solid #666;
+}
+
+.download-btn:hover {
+    background: #444;
+}
+
+.readme-section {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid #333;
+}
+
+.markdown-body {
+    color: #fff;
+    line-height: 1.6;
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+    color: #fff;
+}
+
+.markdown-body code {
+    background: #333;
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-family: monospace;
+}
+
+.markdown-body pre {
+    background: #333;
+    padding: 1rem;
+    border-radius: 8px;
+    overflow-x: auto;
+}
+
+.markdown-body a {
+    color: #0A84FF;
+}
+
+.markdown-body img {
+    max-width: 100%;
+    border-radius: 8px;
+}
+
+.file-preview {
+    width: 100%;
+    height: 200px;
+    background: #252527;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+}
+
+.preview-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.preview-frame {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: #252527;
+}
+
+.documentation-section {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid #333;
+}
+
+.terminal-nav {
+    margin: 2rem 0;
+    font-family: 'Courier New', monospace;
+}
+
+.terminal-item {
+    display: flex;
+    align-items: center;
+    margin: 0.5rem 0;
+}
+
+.terminal-path {
+    color: #fff;
+}
+
+.terminal-child {
+    margin-left: 1rem;
+}
+
+.terminal-branch {
+    color: #666;
+    margin-right: 0.5rem;
+}
+
+.terminal-branch-line {
+    color: #666;
+    margin-right: 0.5rem;
+}
+
+.terminal-link {
+    color: #fff;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.terminal-link:hover {
+    color: #0A84FF;
+    text-decoration: none;
 }
 

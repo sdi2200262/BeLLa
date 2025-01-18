@@ -6,30 +6,46 @@
     <title>BeLLa - Uploads</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
+
+<!-- upload page -->
 <body>
+    <!-- breadcrumb navigation menu -->
     <div class="breadcrumb">
         <a href="/" class="breadcrumb-link" ">/Home</a><a href="/upload" class="breadcrumb-link" ">/Upload</a>
     </div>
+
     <h1>Uploads</h1>
+    <!-- upload button that toggles the upload form -->
     <button onclick="toggleUploadForm()" class="upload-btn">Upload File</button>
+    
+    <!-- upload form -->
     <div id="uploadForm" style="display: none;">
         <form action="/upload" method="post" enctype="multipart/form-data">
+            
+            <!-- upload section -->
             <div class="upload-section">
                 <label for="file">Select File to Upload:</label>
-                <input type="file" id="file" name="file" required>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <input type="file" id="file" name="file" required onchange="updateFileName()">
+                    <button type="button" onclick="clearFileInput()" style="display: none;" id="clearFileBtn">✕</button>
+                </div>
                 <!-- only images will be supported for now -->
                 <small>Supported formats: .png, .jpg, .jpeg, .gif, .webp</small>
                 <!-- add vertical spacing  -->
                 <br>
                 <br>
-                
             </div>
-            
+
+            <!-- readme section -->
             <div class="readme-section">
                 <label>Add Documentation:</label>
                 <div style="display: flex; flex-direction: column; gap: 8px;">
+                    
+                    <!-- upload readme option checkboxes -->
+
+                    <!-- upload readme option -->
                     <div>
-                        <input type="radio" id="uploadReadme" name="readmeChoice" value="upload" onclick="toggleReadmeOptions()" style="appearance: none; width: 16px; height: 16px; border: 1px solid #666; border-radius: 3px; background: #333; position: relative; cursor: pointer;">
+                        <input type="radio" id="uploadReadme" name="readmeChoice" value="upload" onclick="toggleReadmeOptions()" required style="appearance: none; width: 16px; height: 16px; border: 1px solid #666; border-radius: 3px; background: #333; position: relative; cursor: pointer;">
                         <label for="uploadReadme">Upload README file</label>
                         <div id="readmeFileSection" style="display: none;">
                             <input type="file" id="readmeFile" name="readmeFile" accept=".txt,.md">
@@ -37,6 +53,7 @@
                         </div>
                     </div>
                     
+                    <!-- write readme option -->
                     <div>
                         <input type="radio" id="writeReadme" name="readmeChoice" value="write" onclick="toggleReadmeOptions()" style="appearance: none; width: 16px; height: 16px; border: 1px solid #666; border-radius: 3px; background: #333; position: relative; cursor: pointer;">
                         <label for="writeReadme">Write ReadMe</label>
@@ -45,25 +62,45 @@
                         </div>
                     </div>
 
+                    <!-- no readme option -->
                     <div>
                         <input type="radio" id="noReadme" name="readmeChoice" value="none" onclick="toggleReadmeOptions()" style="appearance: none; width: 16px; height: 16px; border: 1px solid #666; border-radius: 3px; background: #333; position: relative; cursor: pointer;">
                         <label for="noReadme">No Documentation</label>
                     </div>
                 </div>
             </div>
-            
+
+            <!-- submit button -->
             <br>
-            <button type="submit" class="submit-btn">Upload</button>
+            <button type="submit" class="submit-btn" onclick="return validateForm()">Upload</button>
         </form>
     </div>
 
+    <!-- uploaded files section -->
     <h2>Uploaded Files</h2>
     <div class="file-list">
-        {% if files %}
+        {% if files and files|length > 0 %}
+            {% if files|length == 1 %}
+                <p>File {{ files[0].name }} feels lonely here...</p>
+            {% elif files|length < 5 and files|length > 1 %}
+                <p>Files 
+                    {% for file in files %}
+                        {% if not loop.last %}
+                            {{ file.name }}, 
+                        {% else %}
+                            {% if files|length > 1 %}
+                                and {{ file.name }}
+                            {% else %}
+                                {{ file.name }}
+                            {% endif %}
+                        {% endif %}
+                    {% endfor %}
+                    feel very lonely...</p>
+            {% endif %}
             <ul>
                 {% for file in files %}
-                    <li onclick="openFileView('{{ file.name }}')">
-                        {{ file.name }}
+                    <li onclick="openFileView('{{ file.name }}')" class="file-item">
+                        <span class="file-name" title="{{ file.name }}">{{ file.name[:20] + '...' if file.name|length > 20 else file.name }}</span>
                         {% if file.has_readme %}
                             <span class="readme-indicator" title="Has documentation">📄</span>
                         {% endif %}
@@ -71,7 +108,7 @@
                 {% endfor %}
             </ul>
         {% else %}
-            <p>No files have been uploaded yet.</p>
+            <p>No files have been uploaded yet. Its very lonely here...</p>
         {% endif %}
     </div>
 
@@ -101,6 +138,22 @@
         function toggleUploadForm() {
             const uploadForm = document.getElementById('uploadForm');
             uploadForm.style.display = uploadForm.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function updateFileName() {
+            const fileInput = document.getElementById('file');
+            const clearBtn = document.getElementById('clearFileBtn');
+            if (fileInput.value) {
+                clearBtn.style.display = 'block';
+            } else {
+                clearBtn.style.display = 'none';
+            }
+        }
+
+        function clearFileInput() {
+            const fileInput = document.getElementById('file');
+            fileInput.value = '';
+            document.getElementById('clearFileBtn').style.display = 'none';
         }
 
         function toggleReadmeOptions() {
@@ -142,6 +195,39 @@
             
             readmeFileSection.style.display = uploadReadme.checked ? 'block' : 'none';
             readmeTextSection.style.display = writeReadme.checked ? 'block' : 'none';
+        }
+
+        function validateForm() {
+            // Check if a file is selected
+            const fileInput = document.getElementById('file');
+            if (!fileInput.value) {
+                alert('Please select a file to upload and select a documentation option');
+                return false;
+            }
+
+            // Check if any readme option is selected
+            const readmeChoice = document.querySelector('input[name="readmeChoice"]:checked');
+            if (!readmeChoice) {
+                alert('Please select a file to upload and select a documentation option');
+                return false;
+            }
+
+            // Validate based on selected option
+            if (readmeChoice.value === 'upload') {
+                const readmeFile = document.getElementById('readmeFile');
+                if (!readmeFile.value) {
+                    alert('Please select a README file to upload');
+                    return false;
+                }
+            } else if (readmeChoice.value === 'write') {
+                const readmeText = document.getElementById('readmeText');
+                if (!readmeText.value.trim()) {
+                    alert('Please write some documentation or choose a different option');
+                    return false;
+                }
+            }
+            
+            return true;
         }
     </script>
 </body>
