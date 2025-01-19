@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory
 from dotenv import load_dotenv
 from datetime import datetime
 from app.database import init_db, add_file, get_all_files, get_file_info, sync_files
@@ -125,6 +125,14 @@ def file_view(filename):
                 readme_content = f.read()
     
     return render_template('file_view.html', file=file, readme_content=readme_content)
+
+@app.route('/uploads/<filename>')
+def view_file(filename):
+    return send_from_directory(UPLOAD_FOLDER, filename)
+
+@app.route('/download/<filename>')
+def download_file(filename):
+    return send_from_directory(UPLOAD_FOLDER, filename, as_attachment=True)
 
 # Move database initialization to create_app function
 def create_app():
