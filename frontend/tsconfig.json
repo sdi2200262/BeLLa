@@ -1,0 +1,9 @@
+// frontend/tsconfig.json
+{
+  "files": [],
+  "references": [
+    { "path": "./config/tsconfig.app.json" },
+    { "path": "./config/tsconfig.node.json" },
+    { "path": "./src/components-library/tsconfig.json" }
+  ]
+}
