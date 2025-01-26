@@ -5,7 +5,7 @@ I added the history API because apparently it loads the page faster when routing
 
 In the ComponentsShowcase page i will be adding the components i have created so far and showcasing their functionality. Its been really fun so far. Using cursor lets me be really creative with the design because im not really stressing out about the code.
 
-
+------------------------------
 ### Summary of Progress
 
 1. **Components Added**
