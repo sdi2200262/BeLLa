@@ -1,0 +1,63 @@
+.nav-tree-center {
+  margin: 4rem auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-family: "SF Mono", Monaco, monospace;
+  font-size: 14px;
+}
+
+.nav-link {
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+  padding: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.nav-link:hover {
+  color: #007AFF;
+  text-shadow: 0 0 10px rgba(0, 122, 255, 0.3);
+}
+
+.nav-indent {
+  margin-left: 1rem;
+}
+
+.page-breadcrumb {
+  margin-bottom: 2rem;
+  font-family: "SF Mono", Monaco, monospace;
+  font-size: 14px;
+}
+
+.breadcrumb-item {
+  color: rgba(255, 255, 255, 0.8);
+  text-decoration: none;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+a.breadcrumb-item {
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.breadcrumb-item:hover {
+  color: #007AFF;
+  text-shadow: 0 0 10px rgba(0, 122, 255, 0.3);
+}
+
+.breadcrumb-separator {
+  color: rgba(255, 255, 255, 0.4);
+  margin: 0 0.5rem;
+}
+
+@media (prefers-color-scheme: light) {
+  .nav-link,
+  .breadcrumb-item {
+    color: rgba(0, 0, 0, 0.8);
+  }
+  
+  .breadcrumb-separator {
+    color: rgba(0, 0, 0, 0.4);
+  }
+}

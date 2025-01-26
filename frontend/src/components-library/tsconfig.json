@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "lib": ["dom", "es2016", "dom.iterable"],
     "target": "ES6",
     "module": "ESNext",
     "declaration": true,

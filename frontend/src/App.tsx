@@ -1,13 +1,31 @@
-import { Layout, LandingPage, ComponentsShowcase } from './components-library';
+import { useState, useEffect } from 'react';
+import { LandingPage, ComponentsShowcase } from './components-library';
 
 function App() {
-  const currentPath = window.location.pathname;
+  const [currentPath, setCurrentPath] = useState(window.location.pathname);
+
+  useEffect(() => {
+    const handleLocationChange = () => {
+      setCurrentPath(window.location.pathname);
+    };
+
+    // Listen for popstate events (browser back/forward)
+    window.addEventListener('popstate', handleLocationChange);
+    
+    // Listen for our custom navigation events
+    window.addEventListener('popstate', handleLocationChange);
+
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+      window.removeEventListener('popstate', handleLocationChange);
+    };
+  }, []);
 
   return (
-    <Layout>
+    <>
       {currentPath === '/' && <LandingPage />}
       {currentPath === '/components' && <ComponentsShowcase />}
-    </Layout>
+    </>
   );
 }
 

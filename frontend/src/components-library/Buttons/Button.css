@@ -1,15 +1,145 @@
-/* frontend/src/components-library/Buttons/Button.css */
-.my-button {
-    padding: 10px 20px;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 16px;
-    transition: background-color 0.3s;
-  }
+/* Action Button */
+.action_button {
+  padding: 8px 16px;
+  color: rgba(255, 255, 255, 0.87);
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 0;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  transition: all 0.2s ease;
+}
+
+.action_button_large {
+  font-size: 16px;
+  padding: 12px 24px;
+}
   
-  .my-button:hover {
-    background-color: #0056b3;
+.action_button:hover,
+.action_button.active {
+  background-color: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(0, 0, 0, 0.87);
+  color: rgba(0, 0, 0, 0.87);
+}
+
+@media (prefers-color-scheme: light) {
+  .action_button {
+    border: 1px solid rgba(0, 0, 0, 0.87);
   }
+}
+
+/* Text Button */
+.button_just_text {
+  padding: 4px 0;
+  color: rgba(255, 255, 255, 0.87);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.button_just_text_large {
+  font-size: 16px;
+  padding: 12px 24px;
+}
+
+.button_just_text:hover {
+  color: #007AFF;
+  text-shadow: 0 0 10px rgba(0, 122, 255, 0.3);
+}
+
+.button_just_text:active {
+  color: #0051a8;
+}
+
+@media (prefers-color-scheme: light) {
+  .button_just_text {
+    color: rgba(0, 0, 0, 0.87);
+  }
+}
+
+/* Text Button Effects */
+
+/* Base effect styles */
+.button_just_text[class*='_scale'],
+.button_just_text[class*='_slide'],
+.button_just_text[class*='_underline'] {
+  position: relative;
+}
+
+/* Underline effect */
+.button_just_text_underline::after {
+  content: '';
+  color: #007AFF;
+  position: absolute;
+  width: 0;
+  height: 1px;
+  bottom: 4px;
+  left: 50%;
+  background-color: #007AFF;
+  transition: all 0.3s ease;
+  transform: translateX(-50%);
+}
+
+.button_just_text_underline:hover::after,
+.button_just_text_underline.active::after {
+  width: 100%;
+}
+
+/* Slide effect */
+.button_just_text_slide {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.button_just_text_slide::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 122, 255, 0.1);
+  transition: all 0.3s ease;
+  z-index: -1;
+}
+
+.button_just_text_slide:hover::before,
+.button_just_text_slide.active::before {
+  left: 0;
+}
+
+/* Scale effect */
+.button_just_text_scale {
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.button_just_text_scale:hover,
+.button_just_text_scale.active {
+  transform: scale(1.1);
+}
+
+/* Combination hover states */
+.button_just_text:hover,
+.button_just_text.active,
+.button_just_text_slide:hover,
+.button_just_text_slide.active,
+.button_just_text_scale:hover,
+.button_just_text_scale.active {
+  color: #007AFF;
+}
+
+/* Specific combination adjustments */
+.button_just_text_underline.button_just_text_scale::after {
+  bottom: 2px; /* Adjust underline position when scaled */
+}
+
+.button_just_text_slide.button_just_text_scale::before {
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
