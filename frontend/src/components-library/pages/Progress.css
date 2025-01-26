@@ -1,0 +1,72 @@
+.page {
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+  background-color: rgba(0, 0, 0, 0.02);
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0);
+}
+
+.file-viewer {
+  --file-container-width: 300px;
+  --file-container-gap: 0.75rem;
+  --file-item-padding: 0.75rem;
+  --file-item-font-size: 0.9rem;
+  --file-item-border-radius: 6px;
+  background-color: rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+  padding: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  flex: 0 0 300px;
+  height: 600px;
+  overflow-y: auto;
+}
+
+.readme-viewer {
+  --readme-width: 100%;
+  --readme-padding: 1.5rem;
+  --readme-font-size: 1rem;
+  --readme-heading-scale: 1;
+  background-color: rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+  padding: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  flex: 1;
+  height: 600px;
+  overflow-y: auto;
+}
+
+.content-row {
+  display: flex;
+  gap: 2rem;
+  margin-top: 2rem;
+  overflow-x: auto;
+}
+
+.page p {
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 1rem;
+}
+
+@media (prefers-color-scheme: light) {
+  .page p {
+    color: rgba(0, 0, 0, 0.6);
+  }
+}
+
+@media (max-width: 768px) {
+  .content-row {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .file-viewer {
+    flex: none;
+    width: 100%;
+    height: 400px;
+  }
+
+  .readme-viewer {
+    height: 400px;
+  }
+}

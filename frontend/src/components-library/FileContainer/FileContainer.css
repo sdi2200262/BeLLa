@@ -1,0 +1,65 @@
+:root {
+  --file-container-width: 100%;
+  --file-container-gap: 0.5rem;
+  --file-item-padding: 0.75rem;
+  --file-item-font-size: 0.9rem;
+  --file-item-border-radius: 4px;
+}
+
+.full-size-file-container {
+  --file-container-width: 800px;
+  --file-container-gap: 1rem;
+  --file-item-padding: 1rem;
+  --file-item-font-size: 1.1rem;
+  --file-item-border-radius: 6px;
+}
+
+.file-container {
+  width: var(--file-container-width);
+  display: flex;
+  flex-direction: column;
+  gap: var(--file-container-gap);
+  padding: var(--file-item-padding);
+  background-color: rgba(0, 0, 0, 0.02);
+  border-radius: var(--file-item-border-radius);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.file-item {
+  width: 100%;
+  padding: var(--file-item-padding);
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--file-item-border-radius);
+  color: rgba(255, 255, 255, 0.87);
+  font-size: var(--file-item-font-size);
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: "SF Mono", Monaco, monospace;
+}
+
+.file-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #007AFF;
+  text-shadow: 0 0 10px rgba(0, 122, 255, 0.3);
+}
+
+/* Light theme support */
+@media (prefers-color-scheme: light) {
+  .file-container {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-color: rgba(0, 0, 0, 0.1);
+  }
+
+  .file-item {
+    border-color: rgba(0, 0, 0, 0.1);
+    color: rgba(0, 0, 0, 0.87);
+  }
+
+  .file-item:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.2);
+  }
+} 

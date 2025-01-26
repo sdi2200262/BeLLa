@@ -1,10 +1,22 @@
+:root {
+    --nav-scale: 1;
+    --nav-font-size: 14px;
+    --nav-spacing: 0.5rem;
+}
+
+.full-size-nav {
+    --nav-scale: 1.2;
+    --nav-font-size: 16px;
+    --nav-spacing: 1rem;
+}
+
 .nav-tree-center {
   margin: 4rem auto;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--nav-spacing);
   font-family: "SF Mono", Monaco, monospace;
-  font-size: 14px;
+  font-size: calc(var(--nav-font-size) * var(--nav-scale));
 }
 
 .nav-link {
@@ -26,7 +38,7 @@
 .page-breadcrumb {
   margin-bottom: 2rem;
   font-family: "SF Mono", Monaco, monospace;
-  font-size: 14px;
+  font-size: calc(var(--nav-font-size) * var(--nav-scale));
 }
 
 .breadcrumb-item {

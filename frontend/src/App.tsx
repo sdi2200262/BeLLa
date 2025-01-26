@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LandingPage, ComponentsShowcase } from './components-library';
+import { LandingPage, ComponentsShowcase, Progress } from './components-library';
 
 function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
@@ -25,6 +25,7 @@ function App() {
     <>
       {currentPath === '/' && <LandingPage />}
       {currentPath === '/components' && <ComponentsShowcase />}
+      {currentPath === '/progress' && <Progress />}
     </>
   );
 }

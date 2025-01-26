@@ -1,12 +1,27 @@
+:root {
+    --button-scale: 1;
+    --button-padding-base: 8px;
+    --button-font-size-base: 14px;
+    --button-border-width: 1px;
+}
+
+.full-size-buttons {
+    --button-scale: 1.4;
+    --button-padding-base: 12px;
+    --button-font-size-base: 16px;
+    --button-border-width: 2px;
+}
+
 /* Action Button */
 .action_button {
-  padding: 8px 16px;
+  padding: calc(var(--button-padding-base) * var(--button-scale)) 
+          calc(var(--button-padding-base) * 2 * var(--button-scale));
   color: rgba(255, 255, 255, 0.87);
   background: none;
   border: 1px solid rgba(255, 255, 255, 0.85);
   border-radius: 0;
   cursor: pointer;
-  font-size: 14px;
+  font-size: calc(var(--button-font-size-base) * var(--button-scale));
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   transition: all 0.2s ease;
 }
@@ -88,6 +103,12 @@
 .button_just_text_underline:hover::after,
 .button_just_text_underline.active::after {
   width: 100%;
+}
+
+/* Add this new style for active state */
+.button_just_text_underline.section-title.active::after {
+  width: 100%;
+  background-color: #007AFF;
 }
 
 /* Slide effect */

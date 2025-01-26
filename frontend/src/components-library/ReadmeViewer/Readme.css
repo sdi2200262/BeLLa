@@ -1,0 +1,258 @@
+:root {
+    --readme-width: 100%;
+    --readme-padding: 1.5rem;
+    --readme-font-size: 1rem;
+    --readme-heading-scale: 1;
+    --readme-container-height: 500px; /* New variable for container height */
+}
+
+.full-size-readme {
+    --readme-width: 1000px;
+    --readme-padding: 3rem;
+    --readme-font-size: 1.2rem;
+    --readme-heading-scale: 1.2;
+    --readme-container-height: calc(100vh - 200px); /* Adjust for full-size view */
+}
+
+.readme-container {
+    width: var(--readme-width);
+    max-width: calc(100% - (var(--readme-padding) * 2));
+    padding: var(--readme-padding);
+    position: relative;
+    margin: 0 auto;
+    background-color: rgba(0, 0, 0, 0.8); /* Dark background for contrast */
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0;
+    transform: translateY(-20px);
+    height: 0;
+    max-height: var(--readme-container-height);
+    overflow: hidden;
+}
+
+.readme-container.visible {
+    opacity: 1;
+    transform: translateY(0);
+    height: auto;
+    max-height: var(--readme-container-height);
+    overflow-y: auto;
+}
+
+/* Button container styles */
+.readme-button-container {
+    display: flex;
+    justify-content: flex-start;
+    transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    margin-bottom: 1rem;
+    z-index: 1;
+}
+
+.readme-button-container.centered {
+    justify-content: center; /* Center when active */
+    transform: translateY(calc(var(--readme-padding) * 0.5)); /* Move down slightly */
+}
+
+.readme-content {
+    width: 100%;
+    max-width: calc(100% - var(--readme-padding));
+    height: auto;
+    max-height: calc(var(--readme-container-height) - (var(--readme-padding) * 2));
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.87);
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding-right: var(--readme-padding);
+}
+
+.readme-content p,
+.readme-content h1,
+.readme-content h2,
+.readme-content h3,
+.readme-content ul,
+.readme-content ol,
+.readme-content code {
+    color: rgba(255, 255, 255, 0.87);
+    margin: 0.5rem 0;
+}
+
+/* Markdown Elements Styling */
+.readme-content h1 {
+    font-size: calc(2rem * var(--readme-heading-scale));
+    margin-bottom: 1.5rem;
+    color: rgba(255, 255, 255, 0.95);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 0.5rem;
+}
+
+.readme-content h2 {
+    font-size: calc(1.5rem * var(--readme-heading-scale));
+    margin: 2rem 0 1rem;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.readme-content h3 {
+    font-size: 1.25rem;
+    margin: 1.5rem 0 0.75rem;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.readme-content p {
+    margin: 1rem 0;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.readme-content code {
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 0.2em 0.4em;
+    border-radius: 3px;
+    font-family: "SF Mono", Monaco, monospace;
+    font-size: 0.9em;
+}
+
+.readme-content pre {
+    width: 100%;
+    max-width: calc(100% - var(--readme-padding));
+    background-color: rgba(255, 255, 255, 0.05);
+    padding: 1rem;
+    border-radius: 5px;
+    overflow-x: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.readme-content pre code {
+    background-color: transparent;
+    padding: 0;
+}
+
+.readme-content ul, .readme-content ol {
+    margin: 1rem 0;
+    padding-left: 2rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.readme-content li {
+    margin: 0.5rem 0;
+}
+
+/* Blockquotes */
+.readme-content blockquote {
+    border-left: 4px solid rgba(255, 255, 255, 0.2);
+    margin: 1rem 0;
+    padding: 1rem 1.5rem;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 0 4px 4px 0;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.readme-content blockquote p {
+    margin: 0.5rem 0;
+    color: inherit;
+}
+
+.readme-content a {
+    color: #007AFF;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.readme-content a:hover {
+    text-shadow: 0 0 10px rgba(0, 122, 255, 0.3);
+}
+
+/* Text Formatting */
+.readme-content strong {
+    color: rgba(255, 255, 255, 0.95);
+    font-weight: 600;
+}
+
+.readme-content em {
+    font-style: italic;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.readme-content strong em,
+.readme-content em strong {
+    color: rgba(255, 255, 255, 1);
+    font-weight: 600;
+    font-style: italic;
+}
+
+.readme-content s,
+.readme-content strike,
+.readme-content del {
+    text-decoration: line-through;
+    color: rgba(255, 255, 255, 0.5);
+    opacity: 0.8;
+}
+
+/* Nested Lists */
+.readme-content ul ul,
+.readme-content ol ol,
+.readme-content ul ol,
+.readme-content ol ul {
+    margin: 0.25rem 0 0.25rem 1.5rem;
+}
+
+/* Horizontal Rule */
+.readme-content hr {
+    border: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin: 2rem 0;
+}
+
+/* Light theme */
+@media (prefers-color-scheme: light) {
+    .readme-container {
+        background-color: rgba(255, 255, 255, 0.95);
+        border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    .readme-content,
+    .readme-content p,
+    .readme-content h1,
+    .readme-content h2,
+    .readme-content h3,
+    .readme-content ul,
+    .readme-content ol,
+    .readme-content code {
+        color: rgba(0, 0, 0, 0.87);
+    }
+
+    .readme-content code,
+    .readme-content pre {
+        background-color: rgba(0, 0, 0, 0.05);
+    }
+
+    .readme-content blockquote {
+        border-left-color: rgba(0, 0, 0, 0.2);
+        background-color: rgba(0, 0, 0, 0.05);
+        color: rgba(0, 0, 0, 0.7);
+    }
+
+    .readme-content strong {
+        color: rgba(0, 0, 0, 0.95);
+    }
+
+    .readme-content em {
+        color: rgba(0, 0, 0, 0.9);
+    }
+
+    .readme-content strong em,
+    .readme-content em strong {
+        color: rgba(0, 0, 0, 1);
+    }
+
+    .readme-content s,
+    .readme-content strike,
+    .readme-content del {
+        color: rgba(0, 0, 0, 0.5);
+    }
+
+    .readme-content hr {
+        border-top-color: rgba(0, 0, 0, 0.1);
+    }
+} 

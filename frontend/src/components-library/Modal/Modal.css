@@ -1,43 +1,78 @@
+:root {
+    --modal-scale: 1;
+    --modal-width: 400px;
+    --modal-padding: 2rem;
+    --modal-border-radius: 8px;
+}
+
+.full-size-modal {
+    --modal-scale: 1.4;
+    --modal-width: 600px;
+    --modal-padding: 3rem;
+    --modal-border-radius: 12px;
+}
+
+.modal {
+    width: var(--modal-width);
+    padding: var(--modal-padding);
+    border-radius: var(--modal-border-radius);
+    font-size: calc(1rem * var(--modal-scale));
+}
+
 .modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(8px);
+    background-color: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     display: flex;
     justify-content: center;
     align-items: center;
     z-index: 1000;
-  }
-  
-  .modal-content {
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+}
+
+.modal-overlay.visible {
+    opacity: 1;
+}
+
+.modal-content {
     background-color: rgba(0, 0, 0, 0.95);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    padding: 1.5rem;
-    max-width: 500px;
-    width: 90%;
+    border-radius: var(--modal-border-radius);
+    padding: var(--modal-padding);
+    width: var(--modal-width);
     max-height: 90vh;
     overflow-y: auto;
-  }
-  
-  .modal-header {
+    transform: scale(0.95);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modal-content.visible {
+    transform: scale(1);
+    opacity: 1;
+}
+
+.modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1rem;
-  }
-  
-  .modal-header h3 {
+}
+
+.modal-header h3 {
     margin: 0;
     color: rgba(255, 255, 255, 0.9);
-    font-size: 1.1rem;
-  }
-  
-  .modal-body {
+    font-size: calc(1.1rem * var(--modal-scale));
+}
+
+.modal-body {
     color: rgba(255, 255, 255, 0.7);
-    font-size: 0.9rem;
+    font-size: calc(0.9rem * var(--modal-scale));
     line-height: 1.5;
-  }
+}

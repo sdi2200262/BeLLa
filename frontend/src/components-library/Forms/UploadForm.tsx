@@ -1,6 +1,6 @@
 import React, { useState, ChangeEvent, FormEvent, FC } from 'react';
 import Button from '../Buttons/Button';
-import './Forms.css';
+import './UploadForm.css';
 
 // Types
 type DocumentationType = 'upload' | 'write' | undefined;
@@ -24,29 +24,39 @@ interface FileInputProps {
   accept?: string;
 }
 
-const FileInput: FC<FileInputProps> = ({ label, selectedFile, onFileChange, onClear, accept }) => (
-  <div className="file-input-wrapper">
-    <Button
-      label={selectedFile ? selectedFile.name : label}
-      onClick={() => document.getElementById(label.replace(/\s+/g, '-').toLowerCase())?.click()}
-      variant="action"
-    />
-    {selectedFile && (
+const FileInput: FC<FileInputProps> = ({ label, selectedFile, onFileChange, onClear, accept }) => {
+  // Function to truncate filename
+  const truncateFilename = (filename: string, maxLength: number = 20) => {
+    if (filename.length <= maxLength) return filename;
+    const extension = filename.split('.').pop();
+    const nameWithoutExt = filename.substring(0, filename.lastIndexOf('.'));
+    return `${nameWithoutExt.substring(0, maxLength)}...${extension ? `.${extension}` : ''}`;
+  };
+
+  return (
+    <div className="file-input-wrapper">
       <Button
-        label="×"
-        onClick={onClear}
-        variant="text"
+        label={selectedFile ? truncateFilename(selectedFile.name) : label}
+        onClick={() => document.getElementById(label.replace(/\s+/g, '-').toLowerCase())?.click()}
+        variant="action"
       />
-    )}
-    <input
-      id={label.replace(/\s+/g, '-').toLowerCase()}
-      type="file"
-      accept={accept}
-      onChange={onFileChange}
-      className="hidden-input"
-    />
-  </div>
-);
+      {selectedFile && (
+        <Button
+          label="×"
+          onClick={onClear}
+          variant="text"
+        />
+      )}
+      <input
+        id={label.replace(/\s+/g, '-').toLowerCase()}
+        type="file"
+        accept={accept}
+        onChange={onFileChange}
+        className="hidden-input"
+      />
+    </div>
+  );
+};
 
 /**
  * DocumentationOption Component
@@ -72,36 +82,47 @@ const DocumentationOptionComponent: FC<DocumentationOptionProps> = ({
   onClearReadmeFile,
   readmeContent,
   onReadmeContentChange,
-}) => (
-  <div className="documentation-option">
-    <Button
-      label={option.label}
-      onClick={onToggle}
-      variant="text"
-      effects={['underline']}
-      isActive={isSelected}
-    />
-    {isSelected && option.value === 'upload' && (
-      <div className="animated fade-in">
-        <FileInput
-          label="Choose README file"
-          selectedFile={readmeFile}
-          onFileChange={onReadmeFileChange}
-          onClear={onClearReadmeFile}
-          accept=".md,.txt"
-        />
-      </div>
-    )}
-    {isSelected && option.value === 'write' && (
-      <textarea
-        className="readme-textarea animated fade-in"
-        placeholder="Write your documentation here..."
-        value={readmeContent}
-        onChange={onReadmeContentChange}
+}) => {
+  return (
+    <div 
+      className={`documentation-option ${isSelected ? 'expanded' : ''}`}
+      data-option={option.value}
+    >
+      <Button
+        label={option.label}
+        onClick={onToggle}
+        variant="text"
+        effects={['underline']}
+        isActive={isSelected}
       />
-    )}
-  </div>
-);
+      {option.value === 'upload' && (
+        <div className={`file-input-container ${isSelected ? 'animated' : ''}`}
+             style={{ display: isSelected ? 'block' : 'none' }}>
+          <FileInput
+            label="Choose README file"
+            selectedFile={readmeFile}
+            onFileChange={onReadmeFileChange}
+            onClear={onClearReadmeFile}
+            accept=".md,.txt"
+          />
+        </div>
+      )}
+      {option.value === 'write' && (
+        <textarea
+          className="readme-textarea"
+          style={{ 
+            display: isSelected ? 'block' : 'none',
+            opacity: isSelected ? 1 : 0,
+            transform: isSelected ? 'translateY(0)' : 'translateY(-20px)'
+          }}
+          placeholder="Write your documentation here..."
+          value={readmeContent}
+          onChange={onReadmeContentChange}
+        />
+      )}
+    </div>
+  );
+};
 
 // Main Component
 const UploadForm: React.FC = () => {
@@ -115,6 +136,9 @@ const UploadForm: React.FC = () => {
     { value: 'upload', label: 'Upload README' },
     { value: 'write', label: 'Write README' },
   ];
+
+  // Add state to track if any documentation option is selected
+  const isAnyDocOptionSelected = documentationType !== undefined;
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] || null;
@@ -198,7 +222,10 @@ const UploadForm: React.FC = () => {
   };
 
   return (
-    <form className="upload-form" onSubmit={handleSubmit}>
+    <form 
+      className={`upload-form ${isAnyDocOptionSelected ? 'expanded' : ''}`} 
+      onSubmit={handleSubmit}
+    >
       {/* Upload File Section */}
       <div className="form-section">
         <h3>Upload a File</h3>
@@ -230,8 +257,13 @@ const UploadForm: React.FC = () => {
         </div>
       </div>
 
-      {/* Form Actions */}
+      {/* Form Actions with inline error */}
       <div className="form-actions">
+        {error && (
+          <div className={`error ${error.type}`}>
+            {error.message}
+          </div>
+        )}
         <Button
           label="Upload"
           onClick={() => {}}
@@ -239,13 +271,6 @@ const UploadForm: React.FC = () => {
           type="submit"
         />
       </div>
-
-      {/* Error Message */}
-      {error && (
-        <div className={`error ${error.type}`}>
-          {error.message}
-        </div>
-      )}
     </form>
   );
 };

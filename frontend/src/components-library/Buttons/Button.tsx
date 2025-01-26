@@ -9,6 +9,7 @@ interface ButtonProps {
   size?: 'normal' | 'large';
   isActive?: boolean;
   type?: 'button' | 'submit' | 'reset';
+  className?: string;
 }
 
 // Button component
@@ -19,7 +20,8 @@ const Button: React.FC<ButtonProps> = ({
   effects = [],
   size = 'normal',
   isActive = false,
-  type
+  type,
+  className = ''
 }) => {
 
   // Get class name
@@ -29,12 +31,18 @@ const Button: React.FC<ButtonProps> = ({
     const effectClasses = effects.map(effect => `${baseClass}_${effect}`);
     const activeClass = isActive ? 'active' : '';
     
-    return [baseClass, sizeClass, ...effectClasses, activeClass].filter(Boolean).join(' ');
+    return [baseClass, sizeClass, ...effectClasses, activeClass, className]
+      .filter(Boolean)
+      .join(' ');
   };
 
   // Render button
   return (
-    <button className={getClassName()} onClick={onClick} type={type || 'button'}>
+    <button 
+      className={getClassName()} 
+      onClick={onClick} 
+      type={type || 'button'}
+    >
       {label}
     </button>
   );

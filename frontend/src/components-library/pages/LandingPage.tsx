@@ -1,5 +1,5 @@
 import React from 'react';
-import './Pages.css';
+import './LandingPage.css';
 import NavTree from '../Navigation/NavTree';
 import Button from '../Buttons/Button';
 
@@ -15,7 +15,8 @@ const LandingPage: React.FC = () => {
       {/* Navigation Tree */}
       <NavTree items={[
         { label: '/home', href: '/' },
-        { label: '/components', href: '/components', indent: true }
+        { label: '/components', href: '/components', indent: true },
+        { label: '/progress', href: '/progress', indent: true }
       ]} />
     </div>
   );
