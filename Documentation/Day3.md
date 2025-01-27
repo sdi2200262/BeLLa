@@ -35,7 +35,7 @@ Today was a very frustrating day. I kept having trouble with the containers that
 
 --------------------------------
 ### AI:
-A very often problem i came across is that when there is an error in the code and i send it to the Chatbot to fix it, if the first try isnt successful then the possibility of the Chatbot hallucinating is very high. Many times it would try to change something in the configuration files and then the whole project would break. Sometimes the fix was so simple that i just had to read the file once to locate it.
+A very frequent problem i came across is that when there is an error in the code and i send it to the Chatbot to fix it, if the first try isnt successful then the possibility of the Chatbot hallucinating is very high. Many times it would try to change something in the configuration files and then the whole project would break. Sometimes the fix was so simple that i just had to read the file once to locate it.
 
 A promt trick that helped was to specify to the Chatbot to only touch the code that is relevant to the error. For example i would say:
 
