@@ -1,0 +1,293 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Minimalistic black and white with blue accent color scheme */
+  --primary-black: #111111;
+  --secondary-black: #333333;
+  --primary-white: #ffffff;
+  --secondary-white: #f5f5f5;
+  --accent-blue: #0066cc;
+  --hover-blue: #0052a3;
+  --transition-speed: 0.2s;
+}
+
+/* Base styles */
+body {
+  background-color: var(--primary-white);
+  color: var(--primary-black);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Icons", "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Utility classes */
+.hover-transition {
+  transition: all var(--transition-speed) ease-in-out;
+}
+
+/* MacOS inspired components */
+.card {
+  background-color: var(--primary-white);
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  transition: all var(--transition-speed) ease-in-out;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.button {
+  background-color: var(--primary-black);
+  color: var(--primary-white);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all var(--transition-speed) ease-in-out;
+}
+
+.button:hover {
+  background-color: var(--accent-blue);
+}
+
+/* Typography */
+.title {
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--primary-black);
+}
+
+.subtitle {
+  font-size: 1.1rem;
+  color: var(--secondary-black);
+}
+
+/* Links */
+.link {
+  color: var(--primary-black);
+  text-decoration: none;
+  transition: all var(--transition-speed) ease-in-out;
+}
+
+.link:hover {
+  color: var(--accent-blue);
+  text-decoration: underline;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary-black: #ffffff;
+    --secondary-black: #f5f5f5;
+    --primary-white: #111111;
+    --secondary-white: #333333;
+  }
+}
+
+@layer base {
+  :root {
+    /* Updated color scheme */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0.5rem;
+}
+
+/* Link styling */
+.link {
+  @apply text-[--primary-black] hover-transition;
+  @apply hover:text-[--accent-blue] hover:underline;
+}
+
+/* MacOS-style font configuration */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer components {
+  /* Enhanced fade-in animation */
+  .fade-in {
+    opacity: 0;
+    animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation-fill-mode: both;
+  }
+
+  /* Card enhancements */
+  .card {
+    @apply bg-card rounded-lg border shadow-sm transition-all duration-200;
+    &:hover {
+      @apply shadow-md transform scale-[1.02];
+    }
+  }
+
+  /* Button enhancements */
+  .button {
+    @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors duration-200 
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+    
+    &:hover {
+      @apply bg-primary/90;
+    }
+  }
+
+  /* Custom page layout */
+  .page {
+    @apply container mx-auto px-4 py-16 min-h-screen flex items-center justify-center;
+  }
+
+  .BeLLa-Logo {
+    @apply text-6xl font-semibold tracking-tight lg:text-7xl;
+    letter-spacing: -0.02em;
+    transition: text-shadow 0.2s ease-in-out;
+    text-shadow: none;
+    cursor: pointer;
+    display: block;
+    text-decoration: none;
+  }
+
+  .BeLLa-Logo:hover {
+    text-shadow: 0 0 20px rgba(255, 255, 255, 0.6);
+  }
+
+  /* Title and text styles */
+  .title {
+    @apply text-4xl font-semibold tracking-tight lg:text-5xl;
+    letter-spacing: -0.02em;
+  }
+
+  .subtitle {
+    @apply text-lg text-muted-foreground;
+  }
+
+  /* Separator line */
+  .white-line-separator {
+    @apply h-px mx-auto;
+    width: 100%;
+    background: linear-gradient(to right, transparent, rgba(255,255,255,1), transparent);
+    margin: 2.5rem 0;
+  }
+
+  /* Tech stack grid animations */
+  .tech-stack-grid {
+    @apply grid grid-cols-4 gap-1.5 mt-6;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-origin: top;
+    will-change: transform, max-height, opacity, padding, margin;
+    max-width: 260px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .tech-stack-grid-enter {
+    opacity: 1;
+    max-height: 300px;
+    transform: scaleY(1);
+    padding: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  .tech-stack-grid-exit {
+    opacity: 0;
+    max-height: 0;
+    transform: scaleY(0.95);
+    padding-top: 0;
+    padding-bottom: 0;
+    margin: 0;
+    overflow: hidden;
+  }
+
+  /* Apple Watch style icon container */
+  .tech-icon-container {
+    @apply flex items-center justify-center;
+    transition: all 0.1s cubic-bezier(0.2, 0, 0.2, 1);
+    background: transparent;
+    border-radius: 12px;
+    padding: 0.2rem;
+  }
+
+  .tech-icon-container:hover {
+    transform: scale(1.15);
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  /* Icon styling */
+  .tech-icon {
+    @apply w-12 h-12;
+  }
+}
+
+/* Enhanced fade-in keyframes */
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fade-in 0.5s ease-out forwards;
+  }
+}
+
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 1000px;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 1000px;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-20px);
+    max-height: 0;
+  }
+}
+
+
+
+
+
+
+
+
