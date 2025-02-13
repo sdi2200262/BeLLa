@@ -1,0 +1,24 @@
+:root {
+    --primary-black: #111111;
+    --secondary-black: #333333;
+    --primary-white: #ffffff;
+    --secondary-white: #e4e4e4;
+    --primary-blue: #0066FF;
+    --hover-blue: #0052a3;
+    --primary-gray: #181818;
+    --secondary-gray: #222222;
+    --transition-speed: 0.2s;
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+  }
+
+  body {
+    @apply bg-black text-white antialiased;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Icons", "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+} 

@@ -1,0 +1,54 @@
+/* Base styles */
+:root {
+  --header-height: 64px;
+  --header-z-index: 50;
+}
+
+/* Base header styles */
+header {
+  height: var(--header-height);
+  z-index: var(--header-z-index);
+}
+
+/* Interactive elements transitions */
+.header-interactive {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Menu icon button styles */
+.text-white\/60 {
+  transition: color 0.2s ease-in-out;
+}
+
+.text-white\/60:hover {
+  cursor: pointer;
+}
+
+/* Logo link styles */
+header a img.h-8 {
+  transition: opacity 0.2s ease-in-out;
+}
+
+header a:hover {
+  cursor: pointer;
+}
+
+/* Navigation link styles - complementing Tailwind's hover:underline */
+nav a.text-lg {
+  text-decoration: none;
+  transition: text-decoration 0.2s ease-in-out;
+}
+
+nav a.text-lg:hover {
+  cursor: pointer;
+}
+
+/* Profile avatar styles */
+nav a img.w-14 {
+  transition: opacity 0.2s ease-in-out;
+}
+
+nav a:last-child:hover {
+  cursor: pointer;
+}
+

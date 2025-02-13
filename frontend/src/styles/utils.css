@@ -1,0 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.hover-transition {
+    transition: all var(--transition-speed) ease-in-out;
+  }
