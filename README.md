@@ -1,6 +1,5 @@
 # BeLLa
 Open source development tools and SaaS.
-=======================================
 
 ## BeLLa NERT
 This web app was created using the BeLLa NERT template.
