@@ -16,20 +16,15 @@ export function Sidebar({ isOpen }: { isOpen: boolean }) {
             <img src="/svg/general/Add_Circle.svg" alt="Add Circle" className="size-6 mr-2" />
             Contribute
           </Button>
+           
+          <div className="w-full h-[1px] bg-white/10 my-4"></div>
           
           <Button variant="ghost" className="rounded-[15px] p-2 w-full justify-start text-xl hover:bg-white/5 transition-colors duration-100">
             <img src="/svg/general/Help_Circle.svg" alt="Help Circle" className="size-6 mr-2" />
             Help
           </Button>
-        
-          <div className="w-full h-[1px] bg-white/10 my-4"></div>
 
-          <Button variant="ghost" className="rounded-[15px] p-2 w-full justify-start text-xl hover:bg-white/5 transition-colors duration-100">
-            <img src="/svg/general/File.svg" alt="File" className="size-6 mr-2" />
-            Terms
-          </Button>
-
-          <Button variant="ghost" className="rounded-[15px] p-2 w-full justify-start text-xl hover:bg-white/5 transition-colors duration-100">
+          <Button variant="ghost" className="rounded-[15px] p-2 w-full justify-start text-xl hover:bg-white/5 transition-colors duration-100" onClick={() => (window.location.href = "/license")}>
             <img src="/svg/general/License.svg" alt="License" className="size-6 mr-2" />
             License
           </Button>
@@ -40,7 +35,7 @@ export function Sidebar({ isOpen }: { isOpen: boolean }) {
           <div className="text-white/40 text-sm">
             © {new Date().getFullYear()} BeLLa. All rights reserved.
           </div>
-                  
+
         </div>
 
         

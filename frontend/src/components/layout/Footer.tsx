@@ -16,7 +16,7 @@ export function Footer() {
             
             <p> | </p>
 
-            <a href="/docs" className="hover:text-white transition-colors">Docs</a>
+            <a href="/documentation" className="hover:text-white transition-colors">Docs</a>
           
           </div>
           

@@ -1,9 +1,14 @@
-import { useState } from 'react'
+import { ReactNode, useState } from 'react'
 import { Header } from './Header'
 import { Sidebar } from './Sidebar'
 import { Footer } from './Footer'
+import { Outlet } from "react-router-dom"
 
-export function MainLayout({ children }: { children: React.ReactNode }) {
+interface MainLayoutProps {
+  children?: ReactNode
+}
+
+export function MainLayout({ children }: MainLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   return (
@@ -11,7 +16,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
       <Header isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
       <Sidebar isOpen={isSidebarOpen} />
       <main className={`pt-16 flex-1 transition-all duration-200 ${isSidebarOpen ? 'blur-sm pointer-events-none' : ''}`}>
-        {children}
+        <Outlet />
       </main>
       <Footer />
     </div>

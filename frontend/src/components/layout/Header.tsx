@@ -1,6 +1,12 @@
+import { useLocation } from 'react-router-dom';
+
 export function Header({ isSidebarOpen, setIsSidebarOpen }: 
   { isSidebarOpen: boolean; setIsSidebarOpen: React.Dispatch<React.SetStateAction<boolean>> }) {
   
+  const location = useLocation();
+  const isDocumentationPage = location.pathname === '/documentation';
+  const isLicensePage = location.pathname === '/license';
+
   const scrollToSection = (e: React.MouseEvent, sectionId: string) => {
     e.preventDefault();
     const section = document.getElementById(sectionId);
@@ -29,11 +35,14 @@ export function Header({ isSidebarOpen, setIsSidebarOpen }:
         
         <nav className="flex items-center gap-8 ">
           
-          <a href="#team-section" onClick={(e) => scrollToSection(e, 'team-section')} className="header-interactive text-lg text-white/90 hover:underline">Team</a>
+          {!isDocumentationPage && !isLicensePage && (
+            <>
+              <a href="#team-section" onClick={(e) => scrollToSection(e, 'team-section')} className="header-interactive text-lg text-white/90 hover:underline">Team</a>
+              <a href="#blog-section" onClick={(e) => scrollToSection(e, 'blog-section')} className="header-interactive text-lg text-white/90 hover:underline">Blog</a>
+            </>
+          )}
           
-          <a href="#blog-section" onClick={(e) => scrollToSection(e, 'blog-section')} className="header-interactive text-lg text-white/90 hover:underline">Blog</a>
-          
-          <a href="/docs" className="header-interactive text-lg text-white/90 hover:underline">Docs</a>
+          <a href="/documentation" className="header-interactive text-lg text-white/90 hover:underline">Docs</a>
           
           <a href="/profile" className="header-interactive">
             <img src="/svg/general/Avatar.svg" alt="Profile" className="w-14 h-14 hover:opacity-80" /> 

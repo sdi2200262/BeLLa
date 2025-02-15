@@ -1,6 +1,7 @@
 @import './styles/base.css';
 @import './styles/components/layout/Header.css';
 @import './styles/components/pages/LandingPage.css';
+@import './styles/components/pages/DocumentationPage.css';
 
 @tailwind base;
 @tailwind components;

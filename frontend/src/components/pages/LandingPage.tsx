@@ -56,8 +56,8 @@ export function LandingPage() {
           <img src="/svg/general/Team.svg" alt="Team" className="team-image size-25" />
           <div className="w-[300px] h-[1px] bg-white/10 mt-8"></div>
           
-          <div className="grid gap-6 mt-8">
-            <Card className="rounded-[15px] bg-black/50 border-white/10 backdrop-blur-md">
+          <div className="grid gap-6 mt-8 ">
+            <Card className="rounded-[15px] bg-black/50 border-white/10 backdrop-blur-md hover:scale-105 transition-all duration-300">
               
               <CardHeader className="flex flex-row gap-4 items-center">
 
@@ -164,9 +164,16 @@ export function LandingPage() {
           </div>
 
           <div className="flex justify-center mt-40">
-            <p className="text-white/80"> February 15, 2025 </p>
+          <div className="text-white/60">
+            {new Date().toLocaleDateString('en-US', {
+              weekday: 'long',
+              year: 'numeric', 
+              month: 'long',
+              day: 'numeric'
+            })}
           </div>
-          
+          </div>
+
         </div>
       </div>
     
