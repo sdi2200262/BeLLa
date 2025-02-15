@@ -21,4 +21,35 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+  
 } 
+
+.button-container {
+  display: flex;
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.button-container.side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.CobuterMan-container {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 180px;
+  padding: 1rem;
+}
+
+.CobuterMan-container.side {
+  position: absolute;
+  bottom: 2rem;
+  right: -2rem;
+  transform: rotate(90deg);
+  padding: 0.5rem;
+  margin-top: auto;
+}

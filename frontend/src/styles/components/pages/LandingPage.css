@@ -1,8 +1,15 @@
-.landing-container {
+.landing-container-vertical {
   display: flex;
-  height: 100vh;
+  flex-direction: column;
+  min-height: calc(100vh - var(--header-height));
   width: 100%;
-  overflow: hidden;
+}
+
+
+.landing-container-horizontal {
+  display: flex;
+  width: 100%;
+  min-height: calc(100vh - var(--header-height));
 }
 
 .content-center {
@@ -22,29 +29,12 @@
 }
 
 
-.CobuterMan {
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 150px; /* Adjust size as needed */
-  height: auto;
-  transition: all 0.3s ease;
-}
-
-.CobuterMan img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-
 /* BeLLa Section */
 .BeLLa-section {
   flex: 1;
   background-color: #000;
   position: relative;
-  min-height: 100vh;
+  height: calc(100vh - var(--header-height));
   padding-bottom: 15rem;
 }
 
@@ -58,7 +48,29 @@
   flex: 1;
   background-color: #181818;
   position: relative;
-  min-height: 100vh;
+  height: calc(100vh - var(--header-height));
 }
 
+/* Team Section */
+.Team-section {
+  width: 100%;
+  background-color: #000;
+  position: relative;
+  height: calc(100vh - var(--header-height));
+}
 
+/* Github Contributors Section */
+.Github-contributors-section {
+  width: 100%;
+  background-color: #181818;
+  position: relative;
+  height: calc(100vh - var(--header-height));
+}
+
+/* Blog Section */
+.Blog-section {
+  width: 100%;
+  background-color: #000;
+  position: relative;
+  height: calc(100vh - var(--header-height));
+}

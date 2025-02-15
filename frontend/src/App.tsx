@@ -1,18 +1,12 @@
 import "./index.css"
-import { useState } from "react"
-import { Header } from "./components/layout/Header"
-import { Sidebar } from "./components/layout/Sidebar"
+import { MainLayout } from "./components/layout/MainLayout"
 import { LandingPage } from "./components/pages/LandingPage"
 
 function App() {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-
   return (
-    <div className="min-h-screen ">
-      <Header />
-      <Sidebar isOpen={sidebarOpen} />
+    <MainLayout>
       <LandingPage />
-    </div>
+    </MainLayout>
   )
 }
 
