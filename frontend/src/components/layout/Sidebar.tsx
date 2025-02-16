@@ -7,7 +7,7 @@ export function Sidebar({ isOpen }: { isOpen: boolean }) {
       <nav className="p-4 flex flex-col gap-2">
         <div className="button-container side top-10">
 
-          <Button variant="ghost" className="rounded-[15px] p-2 w-full justify-start text-xl hover:bg-white/5 transition-colors duration-100">
+          <Button variant="ghost" className="rounded-[15px] p-2 w-full justify-start text-xl hover:bg-white/5 transition-colors duration-100" onClick={() => (window.location.href = "/projects")}>
             <img src="/svg/general/Code.svg" alt="Code" className="size-6 mr-2" />
             Projects
           </Button>
@@ -19,7 +19,7 @@ export function Sidebar({ isOpen }: { isOpen: boolean }) {
            
           <div className="w-full h-[1px] bg-white/10 my-4"></div>
           
-          <Button variant="ghost" className="rounded-[15px] p-2 w-full justify-start text-xl hover:bg-white/5 transition-colors duration-100">
+          <Button variant="ghost" className="rounded-[15px] p-2 w-full justify-start text-xl hover:bg-white/5 transition-colors duration-100" onClick={() => (window.location.href = "/help")}>
             <img src="/svg/general/Help_Circle.svg" alt="Help Circle" className="size-6 mr-2" />
             Help
           </Button>
