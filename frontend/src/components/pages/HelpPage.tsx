@@ -18,24 +18,24 @@ export function HelpPage() {
           <CardContent className="space-y-4 text-white/80">
             <div className="flex flex-col gap-2">
                 
-              <span className="text-xl font-bold">1. Projects</span>
-              <p> Projects are the main way to interact with the BeLLa platform.</p>
-              <ul className="list-disc list-inside">
+              <span className=" text-white text-xl font-bold">1. Projects</span>
+              <p className="text-white"> Projects are the main way to interact with the BeLLa platform.</p>
+              <ul className="list-disc list-inside text-white">
                 <li>View BeLLa Projects, add comments and provide feedback.</li>
                 <li>Clone a project to your local machine and make it your own.</li>
                 <li>Publish your own projects to the BeLLa platform.</li>
               </ul>
-              <Button variant="outline" className="mt-4 w-fit hover:bg-white/5 transition-colors duration-100" onClick={() => (window.location.href = "/projects")}>
+              <Button variant="outline" className="bg-white/5 mt-4 w-fit text-white hover:text-white hover:bg-white/10 transition-colors duration-100" onClick={() => (window.location.href = "/projects")}>
                 <img src="/svg/general/Code.svg" alt="Terminal" className="size-6 mr-2" />
                 View Projects
               </Button>
             
               <div className="w-full h-[1px] bg-white/10 my-4"></div>
 
-              <span className="text-xl font-bold">2. Contribute</span>
-              <p>Contribute to BeLLa by forking the repository of a project and submitting a PR.</p>
-              <p>You can also contribute to BeLLa by publishing your own projects to the platform.</p>
-              <Button variant="outline" className="mt-4 w-fit hover:bg-white/5 transition-colors duration-100" onClick={() => (window.location.href = "/contribute")}>
+              <span className="text-white text-xl font-bold">2. Contribute</span>
+              <p className="text-white">Contribute to BeLLa by forking the repository of a project and submitting a PR.</p>
+              <p className="text-white">You can also contribute to BeLLa by publishing your own projects to the platform.</p>
+              <Button variant="outline" className="bg-white/5 mt-4 w-fit text-white hover:text-white hover:bg-white/10 transition-colors duration-100" onClick={() => (window.location.href = "/contribute")}>
                 <img src="/svg/general/Code.svg" alt="Terminal" className="size-6 mr-2" />
                 View Contribute
               </Button>
@@ -88,7 +88,7 @@ export function HelpPage() {
                 <img src="/svg/general/@.svg" alt="Email" className="size-8" />
                 Email Support
               </h3>
-              <Button variant="outline" className="w-full hover:bg-white/5 transition-colors duration-100">
+              <Button variant="outline" className="w-full bg-white text-black hover:bg-white/80 transition-colors duration-100">
                 contact@bella.dev
               </Button>
             </CardContent>

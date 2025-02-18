@@ -27,6 +27,7 @@ export function Header({ isSidebarOpen, setIsSidebarOpen }:
           <button className="header-interactive text-white/60 hover:text-white/90 relative overflow-hidden" onClick={() => setIsSidebarOpen(prev => !prev)}>
             <MenuIcon className={`w-10 h-10 text-white transition-all duration-300 ${isSidebarOpen ? 'scale-x-[6.5] origin-left' : 'scale-x-100'}`} />
           </button>
+          
           <a href="/" className="header-interactive">
             <img src="/svg/BeLLa/BeLLa-Monogram.svg" alt="BeLLa Logo" className="h-8 hover:opacity-80" />
           </a>

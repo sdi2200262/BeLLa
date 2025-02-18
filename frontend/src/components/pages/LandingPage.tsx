@@ -12,7 +12,7 @@ export function LandingPage() {
             
             <img src="/svg/BeLLa/BeLLa-Logo.svg" alt="BeLLa Logo" className="bella-logo" />
 
-            <p className="text-3xl"> Open source development tools and SaaS.</p>
+            <p className="text-white text-center text-3xl"> Open source development tools and SaaS.</p>
             
             <a href="https://github.com/sdi2200262/BeLLa"> <img src= "/svg/github/Github-Icon.svg" alt="Github Icon" className="github-icon hover:scale-105 transition-all duration-300"/></a>
             
@@ -33,7 +33,7 @@ export function LandingPage() {
             
             <img src="/svg/BeLLa/BeLLa-NERT.svg" alt="Product Logo" className="product-logo" />
 
-            <p className="text-3xl text-center"> Build Web Apps in minutes with a full-stack template. <br /> One command setup. Easy to scale.</p>
+            <p className="text-white text-3xl text-center"> Build Web Apps in minutes with a full-stack template. <br /> One command setup. Easy to scale.</p>
 
             <img src="/svg/general/Browser-Screenshot.svg" alt="Product Image" className="product-image hover:scale-105 transition-all duration-300" />
             
