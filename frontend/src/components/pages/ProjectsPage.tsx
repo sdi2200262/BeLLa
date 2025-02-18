@@ -10,22 +10,29 @@ export function ProjectsPage() {
 
   return (
     <div className="h-full w-full bg-black">
-      
-      {/* Sticky header containing the search bar */}
-      <header className="sticky top-0 z-50">
-        <div className="mx-auto max-w-7xl  p-4">
+      {/* Fixed search bar container */}
+      <div className="fixed top-[64px] left-0 right-0 z-50 ">
+        <div className="mx-auto max-w-7xl p-4">
           <SearchBar 
             placeholder="Search projects..." 
-            className={cn(
-              "text-lg text-black rounded-full hover:scale-[1.02] focus:scale-[1.02] transition-all duration-300 ease-out hover:shadow-lg focus:shadow-lg w-full outline-none h-14 border-0",
-              "focus:ring-0 focus:ring-offset-0 focus:ring-primary"
+            size="xl"
+            radius="full"
+            variant="outline"
+            inputClassName="text-black"
+            placeholderClassName="text-black"
+            containerClassName={cn(
+              "bg-white text-black",
+              "hover:scale-[1.02] focus-within:scale-[1.02]",
+              "transition-all duration-300 ease-out",
+              "hover:shadow-lg focus-within:shadow-lg",
+              "border-white/10"
             )}
-          /> 
+          />
         </div>
-      </header>
+      </div>
 
-      {/* Main content */}
-      <div className="p-8">
+      {/* Main content with padding to account for fixed search bar */}
+      <div className="pt-[132px] p-8"> {/* 132px = header(64px) + searchbar container height */}
         <div className="mx-auto max-w-7xl space-y-8">
           {/* BeLLa Projects Section */}
           <div className="space-y-4">
