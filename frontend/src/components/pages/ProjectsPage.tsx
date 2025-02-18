@@ -1,148 +1,113 @@
-import { useState } from "react"
-import { Button } from "../ui/button"
-import { Card, CardContent } from "../ui/card"
-import { SearchBar } from "../ui/searchbar"
-import { cn } from "@/lib/utils"
+import React, { useEffect, useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
+import { useNavigate } from 'react-router-dom';
+
+interface Repository {
+  name: string;
+  description: string;
+  html_url: string;
+  stargazers_count: number;
+  forks_count: number;
+  language: string;
+  updated_at: string;
+}
 
 export function ProjectsPage() {
-  const [bellaSectionOpen, setBellaSectionOpen] = useState(true)
-  const [userSectionOpen, setUserSectionOpen] = useState(true)
+  const navigate = useNavigate();
+  const [repository, setRepository] = useState<Repository | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchRepository = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/github/user/sdi2200262/repos');
+        const data = await response.json();
+        
+        // No need to find the repo as we're getting it directly now
+        setRepository(data);
+      } catch (err) {
+        console.error('Frontend Error:', err);
+        setError('Failed to fetch repository data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRepository();
+  }, []);
+
+  const handleCardClick = () => {
+    if (repository) {
+      navigate(`/projects/${repository.name}`);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-black">
+        <p className="text-white">Loading repository data...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-black">
+        <p className="text-red-500">{error}</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="h-full w-full bg-black">
-      {/* Fixed search bar container */}
-      <div className="fixed top-[64px] left-0 right-0 z-50 ">
-        <div className="mx-auto max-w-7xl p-4">
-          <SearchBar 
-            placeholder="Search projects..." 
-            size="xl"
-            radius="full"
-            variant="outline"
-            inputClassName="text-black"
-            placeholderClassName="text-black"
-            containerClassName={cn(
-              "bg-white text-black",
-              "hover:scale-[1.02] focus-within:scale-[1.02]",
-              "transition-all duration-300 ease-out",
-              "hover:shadow-lg focus-within:shadow-lg",
-              "border-white/10"
-            )}
-          />
-        </div>
-      </div>
-
-      {/* Main content with padding to account for fixed search bar */}
-      <div className="pt-[132px] p-8"> {/* 132px = header(64px) + searchbar container height */}
-        <div className="mx-auto max-w-7xl space-y-8">
-          {/* BeLLa Projects Section */}
-          <div className="space-y-4">
-            <div className="flex flex-col">
-              <div
-                className="flex items-center justify-between cursor-pointer"
-                onClick={() => setBellaSectionOpen(!bellaSectionOpen)}
-              >
-                <div className="flex items-center gap-2">
-                  <h2 className="text-2xl font-bold text-white">BeLLa Projects</h2>
-                  <img
-                    src="/svg/general/Triangle.svg"
-                    alt="Toggle"
-                    className={`size-3 transition-transform ${
-                      bellaSectionOpen ? "rotate-0" : "-rotate-90"
-                    }`}
-                  />
+    <div className="min-h-screen bg-black p-8">
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-5xl font-bold text-white mb-8">Projects</h1>
+        
+        {repository && (
+          <div 
+            onClick={handleCardClick}
+            className="cursor-pointer"
+          >
+            <Card className="rounded-[15px] bg-black/50 border-white/10 backdrop-blur-md hover:scale-105 transition-all duration-300">
+              <CardHeader>
+                <CardTitle className="text-white text-2xl">
+                  {repository.name}
+                </CardTitle>
+                <CardDescription className="text-white/70">
+                  {repository.description}
+                </CardDescription>
+              </CardHeader>
+              
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4 text-white/70">
+                  <div className="flex items-center gap-2">
+                    <span>⭐ Stars: {repository.stargazers_count}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span>🍴 Forks: {repository.forks_count}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span>🔤 Language: {repository.language}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span>📅 Last Updated: {new Date(repository.updated_at).toLocaleDateString()}</span>
+                  </div>
                 </div>
-                <Button variant="default" className=" bg-black text-white hover:text-white hover:bg-white/5">
-                  <img
-                    src="/svg/general/Add_Circle.svg"
-                    alt="Add"
-                    className="size-5 mr-2"
-                  />
-                  New Project
-                </Button>
-              </div>
-              <div className="h-[1px] bg-white/10" />
-            </div>
-
-            {bellaSectionOpen && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* Project Card 1 */}
-                <Card className="bg-black/50 border-white/10 hover:bg-white/5 transition-colors cursor-pointer">
-                  <CardContent className="p-6">
-                    <h3 className="text-xl font-bold text-white mb-4">Project 1</h3>
-                    <p className="text-white/60">
-                      Project description goes here
-                    </p>
-                  </CardContent>
-                </Card>
-
-                {/* Project Card 2 */}
-                <Card className="bg-black/50 border-white/10 hover:bg-white/5 transition-colors cursor-pointer">
-                  <CardContent className="p-6">
-                    <h3 className="text-xl font-bold text-white mb-4">Project 2</h3>
-                    <p className="text-white/60">
-                      Project description goes here
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
+                
+                <a 
+                  href={repository.html_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-6 inline-block text-white hover:text-white/70 transition-colors"
+                >
+                  View on GitHub →
+                </a>
+              </CardContent>
+            </Card>
           </div>
-
-          {/* User Projects Section */}
-          <div className="space-y-4">
-            <div className="flex flex-col">
-              <div
-                className="flex items-center justify-between cursor-pointer"
-                onClick={() => setUserSectionOpen(!userSectionOpen)}
-              >
-                <div className="flex items-center gap-2">
-                  <h2 className="text-2xl font-bold text-white">User Projects</h2>
-                  <img
-                    src="/svg/general/Triangle.svg"
-                    alt="Toggle"
-                    className={`size-3 transition-transform ${
-                      userSectionOpen ? "rotate-0" : "-rotate-90"
-                    }`}
-                  />
-                </div>
-                <Button variant="default" className="bg-black text-white hover:text-white hover:bg-white/5">
-                  <img
-                    src="/svg/general/Add_Circle.svg"
-                    alt="Add"
-                    className="size-5 mr-2"
-                  />
-                  New Project
-                </Button>
-              </div>
-              <div className="h-[1px] bg-white/10" />
-            </div>
-
-            {userSectionOpen && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* Project Card 1 */}
-                <Card className="bg-black/50 border-white/10 hover:bg-white/5 transition-colors cursor-pointer">
-                  <CardContent className="p-6">
-                    <h3 className="text-xl font-bold text-white mb-4">Project 1</h3>
-                    <p className="text-white/60">
-                      Project description goes here
-                    </p>
-                  </CardContent>
-                </Card>
-
-                {/* Project Card 2 */}
-                <Card className="bg-black/50 border-white/10 hover:bg-white/5 transition-colors cursor-pointer">
-                  <CardContent className="p-6">
-                    <h3 className="text-xl font-bold text-white mb-4">Project 2</h3>
-                    <p className="text-white/60">
-                      Project description goes here
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-          </div>
-        </div>
+        )}
       </div>
     </div>
-  )
+  );
 }
