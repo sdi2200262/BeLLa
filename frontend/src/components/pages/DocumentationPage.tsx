@@ -9,7 +9,7 @@ export function Documentation() {
         
         <h1 className="text-3xl font-bold">Documentation</h1>
         <div className="flex items-center gap-1 text-sm text-muted-foreground">
-          using BeLLa <a href="/components/CodeViewer" className="hover:text-white transition-colors duration-100 flex items-center gap-1">CodeViewer <CodeIcon className="h-3 w-3" /></a>
+          Using BeLLa <a href="/components/CodeViewer" className="hover:text-white transition-colors duration-100 flex items-center gap-1">CodeViewer <CodeIcon className="h-3 w-3" /></a>
         </div>
       
       </div>

@@ -3,8 +3,9 @@ import { Search } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { cva, type VariantProps } from "class-variance-authority"
 
+
 const searchBarVariants = cva(
-  "flex items-center w-full border transition-colors focus-within:ring-1",
+  "flex items-center border transition-colors focus-within:ring-1",
   {
     variants: {
       variant: {
@@ -26,22 +27,41 @@ const searchBarVariants = cva(
         lg: "rounded-lg",
         full: "rounded-full",
       },
+      width: {
+        full: "w-full",
+        auto: "w-auto",
+        sm: "w-64",
+        md: "w-96",
+        lg: "w-[750px]",
+        xl: "w-[900px]",
+      },
+      position: {
+        static: "",
+        fixed: "fixed z-50",
+        sticky: "sticky z-50",
+      }
     },
     defaultVariants: {
       variant: "default",
       size: "default",
       radius: "md",
+      width: "full",
+      position: "static",
     },
   }
 )
 
 export interface SearchBarProps
-  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size">,
+  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size" | "width">,
     VariantProps<typeof searchBarVariants> {
   iconClassName?: string
   containerClassName?: string
   inputClassName?: string
   placeholderClassName?: string
+  top?: string
+  left?: string
+  right?: string
+  bottom?: string
 }
 
 const SearchBar = React.forwardRef<HTMLInputElement, SearchBarProps>(
@@ -50,14 +70,33 @@ const SearchBar = React.forwardRef<HTMLInputElement, SearchBarProps>(
     variant,
     size,
     radius,
+    width,
+    position,
     iconClassName,
     containerClassName,
     inputClassName,
     placeholderClassName,
+    top,
+    left,
+    right,
+    bottom,
     ...props 
   }, ref) => {
+    const positionStyles = position !== 'static' ? {
+      top,
+      left,
+      right,
+      bottom,
+    } : {}
+
     return (
-      <div className={cn(searchBarVariants({ variant, size, radius }), containerClassName)}>
+      <div 
+        className={cn(
+          searchBarVariants({ variant, size, radius, width, position }), 
+          containerClassName
+        )}
+        style={positionStyles}
+      >
         <Search className={cn(
           "ml-3 shrink-0",
           size === "sm" && "size-3",
