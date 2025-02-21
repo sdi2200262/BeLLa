@@ -16,6 +16,11 @@ const languageColors: { [key: string]: string } = {
   Shell: "#89e051",
   Vue: "#41b883",
   React: "#61dafb",
+  Swift: "#ffac45",
+  Kotlin: "#f18e33",
+  Scala: "#c22d40",
+  Elixir: "#6b37bb",
+  "Objective-C": "#438eff",
   Svelte: "#ff3e00"
 };
 

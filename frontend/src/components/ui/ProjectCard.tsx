@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Star, GitFork, Scale, GitCommit, FileCode } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "./card";
@@ -55,9 +55,39 @@ export function ProjectCard({
   const [repository, setRepository] = useState<Repository | null>(null);
   const [languages, setLanguages] = useState<{ [key: string]: number }>({});
   const [commitCount, setCommitCount] = useState<number>(0);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        const newIsVisible = entry.isIntersecting;
+        console.log(`Card visibility changed for ${publicRepoUrl}: ${newIsVisible}`);
+        setIsVisible(newIsVisible);
+      },
+      {
+        root: null,
+        rootMargin: '50px', // Start loading slightly before the card is visible
+        threshold: 0.1
+      }
+    );
+
+    if (cardRef.current) {
+      observer.observe(cardRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [publicRepoUrl]);
 
   useEffect(() => {
     const fetchRepoData = async () => {
+      if (!isVisible || hasLoaded) {
+        console.log(`Skipping fetch for ${publicRepoUrl}: visible=${isVisible}, loaded=${hasLoaded}`);
+        return;
+      }
+
+      console.log(`Fetching data for ${publicRepoUrl}`);
       try {
         const response = await fetch(`http://localhost:3001/api/projects/repo?url=${encodeURIComponent(publicRepoUrl)}`);
         if (!response.ok) {
@@ -67,6 +97,8 @@ export function ProjectCard({
         setRepository(data);
         setLanguages(data.languages || {});
         setCommitCount(data.commitCount || 0);
+        setHasLoaded(true);
+        console.log(`Successfully loaded data for ${publicRepoUrl}`);
       } catch (error) {
         console.error('Error fetching repository data:', error);
         setRepository(null);
@@ -74,7 +106,7 @@ export function ProjectCard({
     };
 
     fetchRepoData();
-  }, [publicRepoUrl]);
+  }, [publicRepoUrl, isVisible, hasLoaded]);
 
   const calculateLanguagePercentages = () => {
     const total = Object.values(languages).reduce((a, b) => a + b, 0);
@@ -95,7 +127,7 @@ export function ProjectCard({
 
   if (!repository) {
     return (
-      <div className={cn("cursor-pointer", className)}>
+      <div ref={cardRef} className={cn("cursor-pointer", className)}>
         <Card className={cn("rounded-[15px] backdrop-blur-md transition-all duration-300 p-4", backgroundColor, borderColor, hoverScale, cardClassName)}>
           <CardHeader>
             <CardTitle className={cn("text-2xl", textColor, titleClassName)}>
@@ -113,7 +145,7 @@ export function ProjectCard({
   }
 
   return (
-    <div onClick={handleCardClick} className={cn("cursor-pointer", className)}>
+    <div ref={cardRef} onClick={handleCardClick} className={cn("cursor-pointer", className)}>
       <Card className={cn(
         "rounded-[15px] backdrop-blur-md transition-all duration-300",
         backgroundColor,

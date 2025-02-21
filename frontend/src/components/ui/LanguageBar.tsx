@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { getLanguageColor } from "@/lib/colors";
 
 interface Language {
   name: string;

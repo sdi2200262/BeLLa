@@ -13,8 +13,8 @@ class GitHubService {
 
   parseGithubRepoUrl(url) {
     try {
-      // Clean the URL first
-      const cleanUrl = url.trim().replace(/\/$/, '');
+      // Clean the URL first and remove query parameters
+      const cleanUrl = url.trim().split('?')[0].replace(/\/$/, '');
       
       // Check if it's an organization URL (has no repository part)
       const orgMatch = cleanUrl.match(/^https?:\/\/(?:www\.)?github\.com\/([^\/]+)\/?$/);

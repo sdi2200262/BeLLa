@@ -1,10 +1,38 @@
 const Project = require('../models/Project');
 const githubService = require('../services/githubService');
+const { clearCache } = require('../middleware/rateLimiter');
 
 exports.getAllProjects = async (req, res) => {
   try {
-    const projects = await Project.find().sort({ createdAt: -1 });
-    res.json(projects);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 9;
+    const search = req.query.search || '';
+    
+    // Calculate skip value for pagination
+    const skip = (page - 1) * limit;
+    
+    // Build query
+    let query = {};
+    if (search) {
+      query.repositoryUrl = { $regex: search, $options: 'i' };
+    }
+    
+    // Get total count for pagination
+    const totalProjects = await Project.countDocuments(query);
+    const totalPages = Math.ceil(totalProjects / limit);
+    
+    // Get paginated projects
+    const projects = await Project.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+    
+    res.json({
+      projects,
+      totalPages,
+      currentPage: page,
+      totalProjects
+    });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch projects' });
   }
@@ -26,10 +54,16 @@ exports.getProjectData = async (req, res) => {
 
 exports.addProject = async (req, res) => {
   try {
-    const { repositoryUrl, uploadedBy, isBellaProject } = req.body;
+    const { repositoryUrl, uploadedBy } = req.body;
     
     if (!repositoryUrl || !uploadedBy) {
       return res.status(400).json({ error: 'Repository URL and uploader information are required' });
+    }
+
+    // Check if project already exists
+    const existingProject = await Project.findOne({ repositoryUrl });
+    if (existingProject) {
+      return res.status(409).json({ error: 'This repository has already been added' });
     }
 
     // Validate the URL by attempting to fetch repository data
@@ -37,13 +71,21 @@ exports.addProject = async (req, res) => {
 
     const project = new Project({
       repositoryUrl,
-      uploadedBy,
-      isBellaProject: Boolean(isBellaProject)
+      uploadedBy
     });
 
     await project.save();
+    
+    // Clear the projects cache
+    clearCache('/api/projects');
+    
     res.status(201).json(project);
   } catch (error) {
+    // Handle MongoDB duplicate key error specifically
+    if (error.code === 11000) {
+      return res.status(409).json({ error: 'This repository has already been added' });
+    }
+    
     res.status(500).json({ error: error.message });
   }
 };
@@ -56,6 +98,9 @@ exports.deleteProject = async (req, res) => {
     if (!project) {
       return res.status(404).json({ error: 'Project not found' });
     }
+    
+    // Clear the projects cache
+    clearCache('/api/projects');
     
     res.json({ message: 'Project deleted successfully' });
   } catch (error) {
