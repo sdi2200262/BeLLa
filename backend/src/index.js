@@ -1,24 +1,33 @@
-// Entry point for our Express server
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const dotenv = require('dotenv');
-
-// Load environment variables from .env file
-dotenv.config();
-
-const githubRoutes = require('./routes/githubRoutes');
+const connectDB = require('./config/database');
+const projectRoutes = require('./routes/projectRoutes');
 
 const app = express();
+const PORT = process.env.PORT || 3001;
 
-// Middleware configuration
+// Connect to MongoDB
+connectDB();
+
+// Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
-// Mount GitHub routes at /github
-app.use('/github', githubRoutes);
+// Routes
+app.use('/api/projects', projectRoutes);
 
-const PORT = process.env.PORT || 3001;
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ error: 'Something went wrong!' });
+});
+
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Server is running on port ${PORT}`);
 }); 

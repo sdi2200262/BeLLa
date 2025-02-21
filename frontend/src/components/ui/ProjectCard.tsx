@@ -1,30 +1,27 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { useNavigate } from 'react-router-dom';
-import { Star, GitFork, Scale, FileCode, GitCommit } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Star, GitFork, Scale, GitCommit, FileCode } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "./card";
 import { LanguageBar } from "./LanguageBar";
-import { useState, useEffect } from 'react';
 import { cn } from "@/lib/utils";
+import { getLanguageColor } from "@/lib/colors";
 
 interface Repository {
   name: string;
   description: string;
-  html_url: string;
+  owner: {
+    login: string;
+  };
   stargazers_count: number;
   forks_count: number;
-  language: string;
-  updated_at: string;
   license: {
     name: string;
   } | null;
   languages_url: string;
-  owner: {
-    login: string;
-  };
-  default_branch: string;
 }
 
 interface ProjectCardProps {
-  repository: Repository;
+  publicRepoUrl: string;
   className?: string;
   cardClassName?: string;
   titleClassName?: string;
@@ -40,7 +37,7 @@ interface ProjectCardProps {
 }
 
 export function ProjectCard({ 
-  repository, 
+  publicRepoUrl,
   className,
   cardClassName,
   titleClassName,
@@ -55,48 +52,31 @@ export function ProjectCard({
   iconSize = 4
 }: ProjectCardProps) {
   const navigate = useNavigate();
+  const [repository, setRepository] = useState<Repository | null>(null);
   const [languages, setLanguages] = useState<{ [key: string]: number }>({});
   const [commitCount, setCommitCount] = useState<number>(0);
 
   useEffect(() => {
-    const fetchLanguages = async () => {
+    const fetchRepoData = async () => {
       try {
-        console.log('Fetching languages from:', repository.languages_url);
-        const response = await fetch(repository.languages_url);
+        const response = await fetch(`http://localhost:3001/api/projects/repo?url=${encodeURIComponent(publicRepoUrl)}`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        console.log('Languages data:', data);
-        setLanguages(data);
-      } catch (err) {
-        console.error('Failed to fetch languages:', err);
-        setLanguages({});
+        setRepository(data);
+        setLanguages(data.languages || {});
+        setCommitCount(data.commitCount || 0);
+      } catch (error) {
+        console.error('Error fetching repository data:', error);
+        setRepository(null);
       }
     };
 
-    const fetchCommitCount = async () => {
-      try {
-        const response = await fetch(`https://api.github.com/repos/${repository.owner.login}/${repository.name}/commits?per_page=1`);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const link = response.headers.get('Link') || '';
-        const match = link.match(/&page=(\d+)>; rel="last"/);
-        const count = match ? parseInt(match[1]) : 0;
-        setCommitCount(count);
-      } catch (err) {
-        console.error('Failed to fetch commit count:', err);
-        setCommitCount(0);
-      }
-    };
-
-    fetchLanguages();
-    fetchCommitCount();
-  }, [repository.languages_url, repository.owner.login, repository.name]);
+    fetchRepoData();
+  }, [publicRepoUrl]);
 
   const calculateLanguagePercentages = () => {
-    console.log('Calculating percentages for languages:', languages);
     const total = Object.values(languages).reduce((a, b) => a + b, 0);
     if (total === 0) return [];
     
@@ -108,8 +88,29 @@ export function ProjectCard({
   };
 
   const handleCardClick = () => {
-    navigate(`/projects/${repository.name}`);
+    if (repository) {
+      navigate(`/projects/${repository.name}`);
+    }
   };
+
+  if (!repository) {
+    return (
+      <div className={cn("cursor-pointer", className)}>
+        <Card className={cn("rounded-[15px] backdrop-blur-md transition-all duration-300 p-4", backgroundColor, borderColor, hoverScale, cardClassName)}>
+          <CardHeader>
+            <CardTitle className={cn("text-2xl", textColor, titleClassName)}>
+              Loading…
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CardDescription className={cn(secondaryTextColor, descriptionClassName)}>
+              Fetching repository data…
+            </CardDescription>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div onClick={handleCardClick} className={cn("cursor-pointer", className)}>
@@ -126,11 +127,11 @@ export function ProjectCard({
               {repository.name}
             </CardTitle>
             <div className={cn("text-sm", secondaryTextColor)}>
-              by {repository.owner.login}
+              by {repository.owner?.login || "Unknown owner"}
             </div>
           </div>
           <CardDescription className={cn(secondaryTextColor, descriptionClassName)}>
-            {repository.description}
+            {repository.description || "No description available"}
           </CardDescription>
         </CardHeader>
         
@@ -146,7 +147,7 @@ export function ProjectCard({
             </div>
             <div className={cn("flex items-center gap-2", secondaryTextColor)}>
               <Scale className={`w-${iconSize} h-${iconSize}`} />
-              <span>{repository.license?.name || 'No license'}</span>
+              <span>{repository.license?.name || "No license"}</span>
             </div>
             <div className={cn("flex items-center gap-2", secondaryTextColor)}>
               <GitCommit className={`w-${iconSize} h-${iconSize}`} />
@@ -170,27 +171,4 @@ export function ProjectCard({
       </Card>
     </div>
   );
-}
-
-// Helper function to get language colors (you can expand this)
-function getLanguageColor(language: string): string {
-  const colors: { [key: string]: string } = {
-    JavaScript: '#f1e05a',
-    TypeScript: '#3178c6',
-    Python: '#3572A5',
-    HTML: '#e34c26',
-    CSS: '#563d7c',
-    Java: '#b07219',
-    C: '#555555',
-    Cpp: '#f34b7d',
-    Csharp: '#178600',
-    Ruby: '#701516',
-    Swift: '#ffac45',
-    Kotlin: '#F18E33',
-    Go: '#00ADD8',
-    Rust: '#dea584',
-    Scala: '#c22d40',
-    // Add more languages as needed
-  };
-  return colors[language] || '#8b949e';
 } 

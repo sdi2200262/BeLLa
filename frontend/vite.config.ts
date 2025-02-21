@@ -6,7 +6,8 @@ import postcssConfig from './postcss.config.js';
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 3000
+    port: 3000,
+    strictPort: true
   },
   css: {
     postcss: postcssConfig

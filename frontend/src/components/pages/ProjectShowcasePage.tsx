@@ -1,263 +1,268 @@
-import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { CodeViewer } from '../ui/CodeViewer';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { Calendar, GitFork, Star, Code, Info, Files, Clock, FileCode, Scale } from 'lucide-react';
-import {
-  Breadcrumb,
-  BreadcrumbList,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "../ui/breadcrumb"
-import { LanguageBar } from '../ui/LanguageBar';
+import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import { 
+  Star, 
+  GitFork, 
+  Scale, 
+  GitCommit, 
+  FileCode, 
+  Clock, 
+  Users, 
+  Eye, 
+  AlertCircle,
+  Link as LinkIcon,
+  GitBranch,
+  CircleDot
+} from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
+import { LanguageBar } from "../ui/LanguageBar";
+import { cn } from "@/lib/utils";
+import { getLanguageColor } from "@/lib/colors";
 
 interface Repository {
   name: string;
   description: string;
-  html_url: string;
+  owner: {
+    login: string;
+    avatar_url: string;
+  };
   stargazers_count: number;
   forks_count: number;
-  language: string;
-  updated_at: string;
-  created_at: string;
-  default_branch: string;
-  license?: {
+  watchers_count: number;
+  open_issues_count: number;
+  license: {
     name: string;
-  };
-  languages_url: string;
+  } | null;
+  created_at: string;
+  updated_at: string;
+  pushed_at: string;
+  default_branch: string;
+  html_url: string;
+  languages: { [key: string]: number };
+  commitCount: number;
+}
+
+interface Project {
+  _id: string;
+  repositoryUrl: string;
+  uploadedBy: string;
+  createdAt: string;
 }
 
 export function ProjectShowcasePage() {
-  const { repoName } = useParams();
+  const { projectName } = useParams();
   const [repository, setRepository] = useState<Repository | null>(null);
-  const [languages, setLanguages] = useState<{ [key: string]: number }>({});
-  const [fileData, setFileData] = useState<any[]>([]);
-  const [selectedFile, setSelectedFile] = useState<string | null>(null);
-  const [fileContent, setFileContent] = useState<string>('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("overview");
 
   useEffect(() => {
-    const fetchRepository = async () => {
+    const fetchProjectData = async () => {
       try {
-        const response = await fetch(`http://localhost:3001/github/user/sdi2200262/repos`);
-        const data = await response.json();
+        // First, get all projects to find the matching URL
+        const projectsResponse = await fetch('http://localhost:3001/api/projects');
+        const projects: Project[] = await projectsResponse.json();
+        
+        // Find project by matching the repository name at the end of the URL
+        const project = projects.find((p: Project) => {
+          const urlParts = p.repositoryUrl.split('/');
+          const repoName = urlParts[urlParts.length - 1].replace('.git', '');
+          return repoName === projectName;
+        });
+
+        if (!project) {
+          console.error('Project not found');
+          return;
+        }
+
+        // Then fetch the detailed repository data
+        const repoResponse = await fetch(`http://localhost:3001/api/projects/repo?url=${encodeURIComponent(project.repositoryUrl)}`);
+        if (!repoResponse.ok) {
+          throw new Error('Failed to fetch repository data');
+        }
+        const data = await repoResponse.json();
         setRepository(data);
-      } catch (err) {
-        console.error('Frontend Error:', err);
-        setError('Failed to fetch repository data');
+      } catch (error) {
+        console.error('Error:', error);
       }
     };
 
-    const fetchContents = async () => {
-      try {
-        const response = await fetch(`http://localhost:3001/github/repos/sdi2200262/${repoName}/contents`);
-        const data = await response.json();
-        setFileData(data);
-      } catch (err) {
-        console.error('Frontend Error:', err);
-        setError('Failed to fetch repository contents');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const fetchLanguages = async () => {
-      if (repository?.languages_url) {
-        try {
-          const response = await fetch(repository.languages_url);
-          if (!response.ok) throw new Error('Failed to fetch languages');
-          const data = await response.json();
-          setLanguages(data);
-        } catch (err) {
-          console.error('Failed to fetch languages:', err);
-          setLanguages({});
-        }
-      }
-    };
-
-    fetchRepository();
-    fetchContents();
-
-    if (repository) {
-      fetchLanguages();
+    if (projectName) {
+      fetchProjectData();
     }
-  }, [repoName]);
+  }, [projectName]);
 
-  const handleFileSelect = async (fileId: string | null) => {
-    setSelectedFile(fileId);
-    if (fileId) {
-      const file = findFileById(fileData, fileId);
-      if (file?.url) {
-        try {
-          const response = await fetch(`http://localhost:3001/github/file-content?url=${file.url}`);
-          const data = await response.json();
-          setFileContent(data.content);
-        } catch (err) {
-          console.error('Frontend Error:', err);
-          setError('Failed to fetch file content');
-        }
-      }
-    }
-  };
-
-  const findFileById = (items: any[], id: string): any => {
-    for (const item of items) {
-      if (item.id === id) return item;
-      if (item.children) {
-        const found = findFileById(item.children, id);
-        if (found) return found;
-      }
-    }
-    return null;
-  };
+  if (!repository) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="animate-pulse">Loading project data...</div>
+      </div>
+    );
+  }
 
   const calculateLanguagePercentages = () => {
-    const total = Object.values(languages).reduce((a, b) => a + b, 0);
+    const total = Object.values(repository.languages).reduce((a, b) => a + b, 0);
     if (total === 0) return [];
     
-    return Object.entries(languages).map(([name, value]) => ({
+    return Object.entries(repository.languages).map(([name, value]) => ({
       name,
       percentage: (value / total) * 100,
       color: getLanguageColor(name)
     }));
   };
 
-  if (loading) return <div className="flex items-center justify-center h-screen bg-black">
-    <p className="text-white">Loading repository data...</p>
-  </div>;
-
-  if (error) return <div className="flex items-center justify-center h-screen bg-black">
-    <p className="text-red-500">{error}</p>
-  </div>;
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
 
   return (
-    <div className="min-h-screen bg-black p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
-        {/* Breadcrumb Navigation */}
-        <Breadcrumb className="text-sm">
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink asChild>
-                <Link to="/projects" className="text-white/60 hover:text-white">
-                  Projects
-                </Link>
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator className="text-white/40" />
-            <BreadcrumbItem>
-              <BreadcrumbPage className="text-white">
-                {repository?.name || 'Loading...'}
-              </BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-
-        {/* Repository Header with Language Bar */}
-        <div className="border-b border-white/10 pb-6 space-y-6">
-          <div>
-            <h1 className="text-4xl font-bold text-white mb-2">{repository?.name}</h1>
-            <p className="text-white/70 text-lg">{repository?.description}</p>
-            
-            <div className="flex gap-4 mt-4">
-              <div className="flex items-center gap-2 text-white/60">
-                <Star className="h-4 w-4" />
-                <span>{repository?.stargazers_count}</span>
-              </div>
-              <div className="flex items-center gap-2 text-white/60">
-                <GitFork className="h-4 w-4" />
-                <span>{repository?.forks_count}</span>
-              </div>
-              <div className="flex items-center gap-2 text-white/60">
-                <Scale className="h-4 w-4" />
-                <span>{repository?.license?.name}</span>
-              </div>
+    <div className="min-h-screen bg-black text-white">
+      {/* Header */}
+      <div className="border-b border-white/10 bg-black/40 backdrop-blur-xl sticky top-0 z-10">
+        <div className="max-w-6xl mx-auto px-6 py-6">
+          <div className="flex items-center gap-4">
+            <img 
+              src={repository.owner.avatar_url} 
+              alt={repository.owner.login}
+              className="w-12 h-12 rounded-full"
+            />
+            <div>
+              <h1 className="text-2xl font-bold flex items-center gap-2">
+                {repository.name}
+                <a 
+                  href={repository.html_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-white/60 hover:text-white"
+                >
+                  <LinkIcon className="w-4 h-4" />
+                </a>
+              </h1>
+              <p className="text-white/60">by {repository.owner.login}</p>
             </div>
-            {Object.keys(languages).length > 0 && (
-              <div className="pt-4">
-                <div className="flex items-center gap-2 text-sm mb-2 text-white/60">
-                  <FileCode className="h-4 w-4" />
-                  <span>Languages</span>
-                </div>
-                <LanguageBar 
-                  languages={calculateLanguagePercentages()} 
-                  className="w-[400px] max-w-2xl"
-                />
-              </div>
-            )}
           </div>
-
         </div>
+      </div>
 
-        {/* Tabs Section */}
-        <Tabs defaultValue="files" className="w-full">
-          <TabsList className="bg-white/10 border border-white/10">
-            <TabsTrigger value="files" className="text-white/90 data-[state=active]:bg-white/50">
-              <Files className="h-4 w-4 mr-2" />
-              Files
-            </TabsTrigger>
-            <TabsTrigger value="info" className=" text-white/90 data-[state=active]:bg-white/50">
-              <Info className="h-4 w-4 mr-2" />
-              Information
-            </TabsTrigger>
+      {/* Main Content */}
+      <div className="max-w-6xl mx-auto px-6 py-8">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
+          <TabsList className="bg-white/5 border-white/10">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="statistics">Statistics</TabsTrigger>
+            <TabsTrigger value="activity">Activity</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="files" className="mt-6">
-            <CodeViewer
-              className="h-[800px]"
-              data={fileData}
-              selectedFile={selectedFile}
-              onSelect={handleFileSelect}
-              content={fileContent}
-              leftPanelClassName="bg-white/10 " 
-              rightPanelClassName="bg-white/5"
-              breadcrumbClassName="text-white/90"
-              fileItemHoverClassName="hover:bg-white/5 transition-colors duration-150"
-              fileItemClassName="text-white/90"
-              selectedFileClassName="bg-white/10 text-white"
-            />
+          <TabsContent value="overview" className="space-y-6">
+            <Card className="bg-black/40 border-white/10">
+              <CardHeader>
+                <CardTitle>About</CardTitle>
+                <CardDescription className="text-white/70">
+                  {repository.description || "No description available"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="flex items-center gap-2 text-white/70">
+                    <Star className="w-4 h-4" />
+                    <span>{repository.stargazers_count} stars</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-white/70">
+                    <GitFork className="w-4 h-4" />
+                    <span>{repository.forks_count} forks</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-white/70">
+                    <Eye className="w-4 h-4" />
+                    <span>{repository.watchers_count} watchers</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-white/70">
+                    <AlertCircle className="w-4 h-4" />
+                    <span>{repository.open_issues_count} issues</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-black/40 border-white/10">
+              <CardHeader>
+                <CardTitle>Languages</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <LanguageBar 
+                  languages={calculateLanguagePercentages()} 
+                  className="w-full"
+                />
+              </CardContent>
+            </Card>
           </TabsContent>
 
-          <TabsContent value="info" className="mt-6">
-            <div className="border border-white/10 rounded-lg p-6 space-y-4 text-white/70">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                <span>Created: {new Date(repository?.created_at || '').toLocaleDateString()}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                <span>Last updated: {new Date(repository?.updated_at || '').toLocaleDateString()}</span>
-              </div>
-              {repository?.license && (
-                <div className="flex items-center gap-2">
-                  <Info className="h-4 w-4" />
-                  <span>License: {repository.license.name}</span>
-                </div>
-              )}
-              <div className="flex items-center gap-2">
-                <Code className="h-4 w-4" />
-                <span>Default branch: {repository?.default_branch}</span>
-              </div>
+          <TabsContent value="statistics" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="bg-black/40 border-white/10">
+                <CardHeader>
+                  <CardTitle>Repository Details</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center gap-2 text-white/70">
+                    <GitBranch className="w-4 h-4" />
+                    <span>Default branch: {repository.default_branch}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-white/70">
+                    <Scale className="w-4 h-4" />
+                    <span>License: {repository.license?.name || "No license"}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-white/70">
+                    <GitCommit className="w-4 h-4" />
+                    <span>Total commits: {repository.commitCount}</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-black/40 border-white/10">
+                <CardHeader>
+                  <CardTitle>Timeline</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center gap-2 text-white/70">
+                    <Clock className="w-4 h-4" />
+                    <span>Created: {formatDate(repository.created_at)}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-white/70">
+                    <Clock className="w-4 h-4" />
+                    <span>Last updated: {formatDate(repository.updated_at)}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-white/70">
+                    <Clock className="w-4 h-4" />
+                    <span>Last push: {formatDate(repository.pushed_at)}</span>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
+          </TabsContent>
+
+          <TabsContent value="activity" className="space-y-6">
+            <Card className="bg-black/40 border-white/10">
+              <CardHeader>
+                <CardTitle>Recent Activity</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {[...Array(5)].map((_, i) => (
+                  <div key={i} className="flex items-center gap-3 text-white/70 border-b border-white/10 last:border-0 pb-3">
+                    <CircleDot className="w-4 h-4 text-white/40" />
+                    <div className="flex-1">
+                      <p className="text-sm">Commit activity data would go here</p>
+                      <p className="text-xs text-white/40">Time information</p>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
     </div>
   );
-}
-
-// Helper function for language colors
-function getLanguageColor(language: string): string {
-  const colors: { [key: string]: string } = {
-    JavaScript: '#f1e05a',
-    TypeScript: '#3178c6',
-    Python: '#3572A5',
-    HTML: '#e34c26',
-    CSS: '#563d7c',
-    Java: '#b07219',
-    // ... add more languages as needed
-  };
-  return colors[language] || '#8b949e';
-}
+} 
