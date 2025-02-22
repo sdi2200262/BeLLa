@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/database');
 const projectRoutes = require('./routes/projectRoutes');
+const contributorsRoutes = require('./routes/contributorsRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -16,6 +17,7 @@ app.use(express.json());
 
 // Routes
 app.use('/api/projects', projectRoutes);
+app.use('/api/contributors', contributorsRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

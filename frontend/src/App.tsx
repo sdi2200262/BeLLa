@@ -6,8 +6,8 @@ import { Documentation } from "./components/pages/DocumentationPage"
 import { HelpPage } from "./components/pages/HelpPage"
 import LicensePage from "./components/pages/LicensePage"
 import { ProjectsPage } from "./components/pages/ProjectsPage"
-import { ProjectShowcasePage } from './components/pages/ProjectShowcasePage'
-
+import { ProjectShowcasePage } from './components/pages/ProjectShowcase'
+import { ComponentsShowcase } from './components/pages/ComponentsShowcase'
 
 function App() {
   return (
@@ -20,6 +20,7 @@ function App() {
           <Route path="help" element={<HelpPage />} />
           <Route path="projects" element={<ProjectsPage />} />
           <Route path="projects/:owner/:repoName" element={<ProjectShowcasePage />} />
+          <Route path="components" element={<ComponentsShowcase />} />
         </Route>
       </Routes>
     </Router>

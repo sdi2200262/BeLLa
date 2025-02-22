@@ -266,17 +266,14 @@ export function ProjectsPage() {
     <div className="min-h-screen bg-black text-white">
       <div className="border-b border-white/10 bg-black/40 backdrop-blur-xl">
         <div className="max-w-6xl mx-auto px-6 py-4">
-        {/* Header */}
-        <h1 className="text-3xl font-bold text-white">Projects</h1>
-        <div className="flex items-center gap-1 text-sm text-white/60">
-          <span>Using BeLLa's backend API, ProjectCard and Seachbar  </span>
-          <CodeIcon className="h-3 w-3" />
-        </div>  
+          <h1 className="text-2xl font-bold">Projects</h1>
+          <div className="flex items-center gap-1 text-sm text-white/60">
+            Using BeLLa's <CodeIcon className="h-3 w-3" /> Project Management System
+          </div>
+        </div>
       </div>
-    </div>
 
-      {/* Tabs */}
-      <div className="max-w-5xl mx-auto px-8 pt-8">
+      <div className="max-w-6xl mx-auto px-6 py-8">
         {/* Tab Description */}
         <div className="mb-8 text-center">
           <h2 className="text-2xl font-bold text-white mb-2">Browse Projects</h2>
@@ -477,18 +474,6 @@ export function ProjectsPage() {
             )}
           </TabsContent>
         </Tabs>
-      </div>
-
-      {/* Footer */}
-      <div className="max-w-5xl mx-auto px-8 py-16 text-center">
-        <p className="text-white/60">
-          {new Date().toLocaleDateString("en-US", {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric"
-          })}
-        </p>
       </div>
     </div>
   );
