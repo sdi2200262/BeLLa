@@ -9,23 +9,28 @@ import { ProjectsPage } from "./components/pages/ProjectsPage"
 import { ProjectShowcasePage } from './components/pages/ProjectShowcase'
 import { ComponentsShowcase } from './components/pages/ComponentsShowcase'
 import { ProfilePage } from './components/pages/ProfilePage'
+import { AuthProvider } from './contexts/AuthContext'
+import { GithubLogin } from './components/GithubLogin'
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<MainLayout />}>
-          <Route index element={<LandingPage />} />
-          <Route path="documentation" element={<Documentation />} />
-          <Route path="license" element={<LicensePage />} />
-          <Route path="help" element={<HelpPage />} />
-          <Route path="projects" element={<ProjectsPage />} />
-          <Route path="projects/:owner/:repoName" element={<ProjectShowcasePage />} />
-          <Route path="components" element={<ComponentsShowcase />} />
-          <Route path="profile" element={<ProfilePage />} />
-        </Route>
-      </Routes>
-    </Router>
+    <AuthProvider>
+      <Router>
+        <Routes>
+          <Route path="/" element={<MainLayout />}>
+            <Route index element={<LandingPage />} />
+            <Route path="login" element={<GithubLogin />} />
+            <Route path="documentation" element={<Documentation />} />
+            <Route path="license" element={<LicensePage />} />
+            <Route path="help" element={<HelpPage />} />
+            <Route path="projects" element={<ProjectsPage />} />
+            <Route path="projects/:owner/:repoName" element={<ProjectShowcasePage />} />
+            <Route path="components" element={<ComponentsShowcase />} />
+            <Route path="profile" element={<ProfilePage />} />
+          </Route>
+        </Routes>
+      </Router>
+    </AuthProvider>
   )
 }
 

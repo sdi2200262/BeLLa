@@ -1,12 +1,44 @@
 import { User2 } from 'lucide-react';
 import { Button } from '../ui/button'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { useAuth } from '../../contexts/AuthContext';
 
 export function Sidebar({ isOpen }: { isOpen: boolean }) {
+  const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleNavigation = (path: string) => {
-    navigate(path);
+    if (path === '/profile' && !user) {
+      navigate('/login');
+    } else {
+      navigate(path);
+    }
+  };
+
+  const getProfileIcon = () => {
+    if (user?.avatar) {
+      // GitHub user with avatar
+      return (
+        <img 
+          src={user.avatar} 
+          alt="Profile" 
+          className="size-6 mr-4 rounded-full"
+        />
+      );
+    } else if (location.pathname !== '/login') {
+      // Guest user
+      return (
+        <img 
+          src="/svg/general/GuestAvatar.svg" 
+          alt="Guest" 
+          className="size-6 mr-4"
+        />
+      );
+    } else {
+      // Default icon
+      return <User2 className="size-6 mr-4" />;
+    }
   };
 
   return (
@@ -27,7 +59,7 @@ export function Sidebar({ isOpen }: { isOpen: boolean }) {
             className="rounded-[15px] p-2 w-full justify-start text-xl text-white hover:text-white hover:bg-white/5 transition-colors duration-100"
             onClick={() => handleNavigation('/profile')}
           >
-            <User2 className="size-6 mr-4" />
+            {getProfileIcon()}
             Profile
           </Button>
 

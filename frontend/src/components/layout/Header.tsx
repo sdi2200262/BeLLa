@@ -2,6 +2,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useCallback, useTransition } from 'react';
 import { User2 } from 'lucide-react';
 import { Button } from '../ui/button';
+import { useAuth } from '../../contexts/AuthContext';
+
 export function Header({ isSidebarOpen, setIsSidebarOpen }: 
   { isSidebarOpen: boolean; setIsSidebarOpen: React.Dispatch<React.SetStateAction<boolean>> }) {
   
@@ -9,6 +11,7 @@ export function Header({ isSidebarOpen, setIsSidebarOpen }:
   const navigate = useNavigate();
   const [isPending, startTransition] = useTransition();
   const isLandingPage = location.pathname === '/';
+  const { user, logout } = useAuth();
 
   // Memoized navigation handler
   const handleNavigation = useCallback((path: string) => {
@@ -24,6 +27,39 @@ export function Header({ isSidebarOpen, setIsSidebarOpen }:
       const headerHeight = 64;
       const targetPosition = section.getBoundingClientRect().top + window.scrollY - headerHeight;
       window.scrollTo({top: targetPosition, behavior: 'smooth'});
+    }
+  };
+
+  const handleProfileClick = () => {
+    if (user) {
+      handleNavigation('/profile');
+    } else {
+      handleNavigation('/login');
+    }
+  };
+
+  const getProfileIcon = () => {
+    if (user?.avatar) {
+      // GitHub user with avatar
+      return (
+        <img 
+          src={user.avatar} 
+          alt="Profile" 
+          className="w-8 h-8 rounded-full hover:opacity-80"
+        />
+      );
+    } else if (location.pathname !== '/login') {
+      // Guest user
+      return (
+        <img 
+          src="/svg/general/GuestAvatar.svg" 
+          alt="Guest" 
+          className="w-8 h-8 hover:opacity-80"
+        />
+      );
+    } else {
+      // Default icon for login page
+      return <User2 className="size-6 mr-4 hover:opacity-80" />;
     }
   };
 
@@ -66,10 +102,10 @@ export function Header({ isSidebarOpen, setIsSidebarOpen }:
           </button>
           
           <button 
-            onClick={() => handleNavigation('/profile')}
+            onClick={handleProfileClick}
             className="header-interactive"
           >
-            <User2 className="size-6 mr-4 hover:opacity-80" />
+            {getProfileIcon()}
           </button>
 
         </nav>
