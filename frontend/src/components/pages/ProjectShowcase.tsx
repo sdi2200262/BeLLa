@@ -21,7 +21,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui
 import { LanguageBar } from "../ui/LanguageBar";
 import { cn } from "@/lib/utils";
 import { getLanguageColor } from "@/lib/colors";
-import { CodeViewer } from "../ui/CodeViewer";
+import { RepoViewer } from "../ui/RepoViewer";
 import { 
   Breadcrumb,
   BreadcrumbItem,
@@ -335,18 +335,9 @@ export function ProjectShowcasePage() {
           <TabsContent value="files" className="space-y-6">
             <Card className="bg-black/40 border-white/10">
               <CardContent className="p-0">
-                <CodeViewer
+                <RepoViewer
+                  data={repository.fileTree}
                   className="rounded-lg"
-                  data={fileTreeData}
-                  selectedFile={selectedFile}
-                  onSelect={setSelectedFile}
-                  content={fileContent}
-                  leftPanelClassName="bg-black/40"
-                  rightPanelClassName="bg-black/40"
-                  breadcrumbClassName="text-white/60"
-                  fileItemHoverClassName="hover:bg-white/5"
-                  fileItemClassName="text-white/70"
-                  selectedFileClassName="bg-white/10 text-white"
                   height="calc(100vh - 300px)"
                 />
               </CardContent>

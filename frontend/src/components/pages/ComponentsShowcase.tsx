@@ -1,10 +1,128 @@
 import { CodeIcon } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
-import { CodeViewer } from "../ui/CodeViewer";
 import { ProjectCard } from "../ui/ProjectCard";
 import { SearchBar } from "../ui/searchbar";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "../ui/button";
+import { RepoViewer } from "../ui/RepoViewer";
+import type { TreeNode } from "../ui/RepoViewer";
+
+// Mock file tree data for RepoViewer showcase
+const mockFileTree: TreeNode = {
+  path: "root",
+  name: "project-root",
+  type: "tree",
+  children: [
+    {
+      path: "docs",
+      name: "docs",
+      type: "tree",
+      children: [
+        {
+          path: "docs/example.md",
+          name: "example.md",
+          type: "blob",
+          content: `# Markdown Showcase
+
+This document demonstrates the markdown rendering capabilities of our RepoViewer component.
+
+## Text Formatting
+
+You can write text in **bold**, *italic*, or ***both***. You can also use ~~strikethrough~~ text.
+
+## Lists
+
+### Unordered Lists
+- First item
+- Second item
+  - Nested item 1
+  - Nested item 2
+- Third item
+
+### Ordered Lists
+1. First step
+2. Second step
+   1. Sub-step A
+   2. Sub-step B
+3. Third step
+
+## Code Examples
+
+Inline code: \`const greeting = "Hello, World!"\`
+
+Code block with syntax highlighting:
+
+\`\`\`typescript
+interface User {
+  id: string;
+  name: string;
+  email: string;
+}
+
+function greetUser(user: User) {
+  return \`Hello, \${user.name}!\`;
+}
+\`\`\`
+
+## Links and Images
+
+[Visit our GitHub](https://github.com/example/repo)
+
+![BeLLa Logo](/svg/BeLLa/BeLLa-Logo.svg)
+
+## Blockquotes
+
+> This is a blockquote.
+> It can span multiple lines.
+>
+> It can also have multiple paragraphs.
+
+## Tables
+
+| Feature | Description | Support |
+|---------|-------------|---------|
+| Headers | H1 through H6 support | ✅ |
+| Code Blocks | Syntax highlighting | ✅ |
+| Lists | Ordered and unordered | ✅ |
+| Blockquotes | Multi-paragraph support | ✅ |
+
+## Horizontal Rule
+
+Above this line
+---
+Below this line`
+        },
+        {
+          path: "docs/sample.tsx",
+          name: "sample.tsx",
+          type: "blob",
+          content: `import { useState } from 'react';
+
+interface Props {
+  title: string;
+  children: React.ReactNode;
+}
+
+export function ExampleComponent({ title, children }: Props) {
+  const [isOpen, setIsOpen] = useState(false);
+  
+  return (
+    <div className="rounded-lg border p-4">
+      <h2 className="text-xl font-bold">{title}</h2>
+      <div className={isOpen ? 'block' : 'hidden'}>
+        {children}
+      </div>
+      <button onClick={() => setIsOpen(!isOpen)}>
+        {isOpen ? 'Hide' : 'Show'} Content
+      </button>
+    </div>
+  );
+}`
+        }
+      ]
+    }
+  ]
+};
 
 type ComponentSection = {
   id: string;
@@ -14,88 +132,10 @@ type ComponentSection = {
   usage: JSX.Element;
 };
 
-// Mock file tree data structure for CodeViewer
-const mockFileTree = [
-  {
-    id: "src",
-    name: "src",
-    children: [
-      {
-        id: "components",
-        name: "components",
-        children: [
-          {
-            id: "ui",
-            name: "ui",
-            children: [
-              {
-                id: "CodeViewer.tsx",
-                name: "CodeViewer.tsx",
-                content: `// CodeViewer.tsx
-import { ResizablePanelGroup, ResizablePanel } from "./resizable"
-
-interface CodeViewerProps {
-  className?: string;
-  leftPanelClassName?: string;
-  rightPanelClassName?: string;
-  breadcrumbClassName?: string;
-  fileItemHoverClassName?: string;
-  fileItemClassName?: string;
-  selectedFileClassName?: string;
-  data?: any;
-  selectedFile?: string | null;
-  onSelect?: (id: string | null) => void;
-  content?: string;
-  height?: string;
-}`
-              },
-              {
-                id: "ProjectCard.tsx",
-                name: "ProjectCard.tsx",
-                content: `// ProjectCard.tsx
-interface ProjectCardProps {
-  publicRepoUrl: string;
-  className?: string;
-  cardClassName?: string;
-  titleClassName?: string;
-  descriptionClassName?: string;
-  statsClassName?: string;
-  languageBarClassName?: string;
-  secondaryTextColor?: string;
-  hoverScale?: string;
-  iconSize?: number;
-}`
-              },
-              {
-                id: "SearchBar.tsx",
-                name: "SearchBar.tsx",
-                content: `// SearchBar.tsx
-interface SearchBarProps {
-  value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onSearch: (value: string) => void;
-  suggestions?: Array<{ id: string; text: string }>;
-  onSuggestionClick?: (suggestion: { id: string; text: string }) => void;
-  size?: "sm" | "md" | "lg";
-  variant?: "default" | "outline";
-  className?: string;
-  inputClassName?: string;
-  suggestionsClassName?: string;
-}`
-              }
-            ]
-          }
-        ]
-      }
-    ]
-  }
-];
-
 export function ComponentsShowcase() {
-  const [activeSection, setActiveSection] = useState<string>("codeviewer");
+  const [activeSection, setActiveSection] = useState<string>("repoviewer");
   const [searchResults, setSearchResults] = useState<Array<{ id: string; text: string }>>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedFile, setSelectedFile] = useState<string | null>(null);
 
   // Mock search function
   const handleSearch = (query: string) => {
@@ -113,24 +153,15 @@ export function ComponentsShowcase() {
 
   const sections: ComponentSection[] = [
     {
-      id: "codeviewer",
-      title: "CodeViewer",
-      description: "A powerful code viewer with file tree navigation and syntax highlighting.",
+      id: "repoviewer",
+      title: "RepoViewer",
+      description: "A lightweight and performant file tree viewer with syntax highlighting.",
       component: (
-        <div className="h-[400px]">
-          <CodeViewer 
-            className="rounded-lg border border-white/10"
-            leftPanelClassName="bg-black/40"
-            rightPanelClassName="bg-black/40"
-            breadcrumbClassName="text-white/60"
-            fileItemHoverClassName="hover:bg-white/5"
-            fileItemClassName="text-white/70"
-            selectedFileClassName="bg-white/10 text-white"
-            height="100%"
+        <div className="h-[500px]">
+          <RepoViewer 
             data={mockFileTree}
-            selectedFile={selectedFile}
-            onSelect={setSelectedFile}
-            content={selectedFile || ""}
+            className="rounded-lg border border-white/10"
+            height="100%"
           />
         </div>
       ),
@@ -139,34 +170,48 @@ export function ComponentsShowcase() {
           <div>
             <p className="font-semibold mb-2">Basic Usage:</p>
             <pre className="bg-white/10 p-4 rounded-lg overflow-x-auto text-white">
-{`import { CodeViewer } from "@/components/ui/CodeViewer"
+{`import { RepoViewer } from "@/components/ui/RepoViewer"
 
 // Define your file tree data
-const fileTree = [
-  {
-    id: "unique-id",
-    name: "filename.tsx",
-    children: [] // For directories
-    content: "file content" // For files
-  }
-]
+const fileTree = {
+  path: "root",
+  name: "project",
+  type: "tree",
+  children: [
+    {
+      path: "docs/example.md",
+      name: "example.md",
+      type: "blob",
+      content: "# Example\\n\\nThis is a markdown file..."
+    }
+  ]
+}
 
 // Use the component
-<CodeViewer
+<RepoViewer
   data={fileTree}
-  selectedFile={selectedFileId}
-  onSelect={setSelectedFileId}
-  height="400px"
-  className="rounded-lg border"
+  height="600px"
+  className="rounded-lg"
 />`}
             </pre>
+          </div>
+          <div>
+            <p className="font-semibold mb-2">Markdown Features:</p>
+            <ul className="list-disc list-inside space-y-2">
+              <li><code className="text-white bg-white/10 px-1.5 py-0.5 rounded">Headers (H1-H6)</code> - Different sized headings with bottom borders</li>
+              <li><code className="text-white bg-white/10 px-1.5 py-0.5 rounded">Text Formatting</code> - Bold, italic, strikethrough</li>
+              <li><code className="text-white bg-white/10 px-1.5 py-0.5 rounded">Lists</code> - Ordered and unordered lists with nesting</li>
+              <li><code className="text-white bg-white/10 px-1.5 py-0.5 rounded">Code Blocks</code> - Syntax highlighting for multiple languages</li>
+              <li><code className="text-white bg-white/10 px-1.5 py-0.5 rounded">Tables</code> - Full table support with headers and borders</li>
+              <li><code className="text-white bg-white/10 px-1.5 py-0.5 rounded">Blockquotes</code> - Styled quote blocks</li>
+              <li><code className="text-white bg-white/10 px-1.5 py-0.5 rounded">Links & Images</code> - External links and responsive images</li>
+              <li><code className="text-white bg-white/10 px-1.5 py-0.5 rounded">Horizontal Rules</code> - Section dividers</li>
+            </ul>
           </div>
           <div>
             <p className="font-semibold mb-2">Props:</p>
             <ul className="list-disc list-inside space-y-2">
               <li><code className="text-white bg-white/10 px-1.5 py-0.5 rounded">data</code> - File tree structure</li>
-              <li><code className="text-white bg-white/10 px-1.5 py-0.5 rounded">selectedFile</code> - Currently selected file ID</li>
-              <li><code className="text-white bg-white/10 px-1.5 py-0.5 rounded">onSelect</code> - Callback when a file is selected</li>
               <li><code className="text-white bg-white/10 px-1.5 py-0.5 rounded">height</code> - Component height (default: "600px")</li>
               <li><code className="text-white bg-white/10 px-1.5 py-0.5 rounded">className</code> - Additional styling classes</li>
             </ul>

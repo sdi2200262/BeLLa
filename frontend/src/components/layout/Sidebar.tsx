@@ -1,3 +1,4 @@
+import { User2 } from 'lucide-react';
 import { Button } from '../ui/button'
 import { useNavigate } from 'react-router-dom'
 
@@ -17,10 +18,19 @@ export function Sidebar({ isOpen }: { isOpen: boolean }) {
             className="rounded-[15px] p-2 w-full justify-start text-xl text-white hover:text-white hover:bg-white/5 transition-colors duration-100" 
             onClick={() => handleNavigation('/projects')}
           >
-            <img src="/svg/general/Code.svg" alt="Code" className="size-6 mr-2" />
+            <img src="/svg/general/Code.svg" alt="Projects" className="size-6 mr-2" />
             Projects
           </Button>
         
+          <Button 
+            variant="ghost" 
+            className="rounded-[15px] p-2 w-full justify-start text-xl text-white hover:text-white hover:bg-white/5 transition-colors duration-100"
+            onClick={() => handleNavigation('/profile')}
+          >
+            <User2 className="size-6 mr-4" />
+            Profile
+          </Button>
+
           <Button 
             variant="ghost" 
             className="rounded-[15px] p-2 w-full justify-start text-xl text-white hover:text-white hover:bg-white/5 transition-colors duration-100"
@@ -49,6 +59,7 @@ export function Sidebar({ isOpen }: { isOpen: boolean }) {
             <img src="/svg/general/License.svg" alt="License" className="size-6 mr-2" />
             License
           </Button>
+
 
           <div className="w-full h-[1px] bg-white/10 my-4"></div>
 
