@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, memo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, ChevronDown, Folder, FolderOpen, FileText } from "lucide-react";
 
@@ -45,8 +45,8 @@ interface FileNodeItemProps {
   fileItemHoverClassName?: string;
 }
 
-// Component to render an individual file or folder node.
-const FileNodeItem: React.FC<FileNodeItemProps> = ({
+// Memoized FileNodeItem component
+const FileNodeItem: React.FC<FileNodeItemProps> = memo(({
   node,
   depth = 0,
   selectedFileId,
@@ -57,8 +57,7 @@ const FileNodeItem: React.FC<FileNodeItemProps> = ({
 }) => {
   const [expanded, setExpanded] = useState(false);
 
-  // Toggle folder expansion or select/deselect file.
-  const handleClick = (e: React.MouseEvent) => {
+  const handleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
 
     if (node.isFolder) {
@@ -66,7 +65,7 @@ const FileNodeItem: React.FC<FileNodeItemProps> = ({
     } else {
       onSelect(node.id === selectedFileId ? null : node.id);
     }
-  };
+  }, [node.isFolder, node.id, selectedFileId, onSelect]);
 
   const isSelected = !node.isFolder && node.id === selectedFileId;
 
@@ -83,6 +82,7 @@ const FileNodeItem: React.FC<FileNodeItemProps> = ({
         style={{ paddingLeft: depth * 16 }}
         animate={{ scale: isSelected ? 1.05 : 1 }}
         transition={{ duration: 0.2 }}
+        layout="position"
       >
         {/* Icon to indicate folder expansion state */}
         {node.isFolder ? (
@@ -113,7 +113,7 @@ const FileNodeItem: React.FC<FileNodeItemProps> = ({
 
       {/* Render child nodes if present and folder is expanded */}
       {node.isFolder && node.children && (
-        <AnimatePresence initial={false}>
+        <AnimatePresence initial={false} mode="wait">
           {expanded && (
             <motion.ul
               initial={{ height: 0, opacity: 0 }}
@@ -140,7 +140,9 @@ const FileNodeItem: React.FC<FileNodeItemProps> = ({
       )}
     </li>
   );
-};
+});
+
+FileNodeItem.displayName = "FileNodeItem";
 
 interface FileSelectorProps {
   className?: string;
@@ -152,8 +154,8 @@ interface FileSelectorProps {
   onSelect?: (id: string | null) => void;
 }
 
-// Main FileSelector component.
-export const FileSelector: React.FC<FileSelectorProps> = ({
+// Main FileSelector component with performance optimizations
+export const FileSelector: React.FC<FileSelectorProps> = memo(({
   className = "",
   fileItemClassName = "",
   selectedFileClassName = "",
@@ -171,19 +173,18 @@ export const FileSelector: React.FC<FileSelectorProps> = ({
   // Use sampleData if no external data is provided.
   const files = data || sampleData;
 
-  // Deselect the file if a click outside of the selector occurs.
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setInternalSelectedFile(null);
-      }
-    };
+  const handleClickOutside = useCallback((event: MouseEvent) => {
+    if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      setInternalSelectedFile(null);
+    }
+  }, []);
 
+  useEffect(() => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, []);
+  }, [handleClickOutside]);
 
   return (
     <div className={cn("h-full w-full", className)}>
@@ -214,6 +215,8 @@ export const FileSelector: React.FC<FileSelectorProps> = ({
       </div>
     </div>
   );
-};
+});
+
+FileSelector.displayName = "FileSelector";
 
 export default FileSelector;

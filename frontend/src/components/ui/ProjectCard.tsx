@@ -18,6 +18,7 @@ interface Repository {
     name: string;
   } | null;
   languages_url: string;
+  html_url: string;
 }
 
 interface ProjectCardProps {
@@ -121,7 +122,12 @@ export function ProjectCard({
 
   const handleCardClick = () => {
     if (repository) {
-      navigate(`/projects/${repository.name}`);
+      // Extract the username and repo name from the public repo URL
+      const urlMatch = publicRepoUrl.match(/github\.com\/([^\/]+)\/([^\/\s]+)/);
+      if (urlMatch && urlMatch[1] && urlMatch[2]) {
+        const [_, owner, repo] = urlMatch;
+        navigate(`/projects/${owner}/${repo}`);
+      }
     }
   };
 

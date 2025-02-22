@@ -19,7 +19,7 @@ function App() {
           <Route path="license" element={<LicensePage />} />
           <Route path="help" element={<HelpPage />} />
           <Route path="projects" element={<ProjectsPage />} />
-          <Route path="projects/:repoName" element={<ProjectShowcasePage />} />
+          <Route path="projects/:owner/:repoName" element={<ProjectShowcasePage />} />
         </Route>
       </Routes>
     </Router>

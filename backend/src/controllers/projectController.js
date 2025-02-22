@@ -106,4 +106,32 @@ exports.deleteProject = async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete project' });
   }
+};
+
+exports.getFileTree = async (req, res) => {
+  try {
+    const { url } = req.query;
+    if (!url) {
+      return res.status(400).json({ error: 'Repository URL is required' });
+    }
+
+    const fileTree = await githubService.getFileTree(url);
+    res.json(fileTree);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.getFileContent = async (req, res) => {
+  try {
+    const { url, path } = req.query;
+    if (!url || !path) {
+      return res.status(400).json({ error: 'Repository URL and file path are required' });
+    }
+
+    const content = await githubService.getFileContent(url, path);
+    res.json(content);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 }; 

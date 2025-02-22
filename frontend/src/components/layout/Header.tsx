@@ -7,6 +7,8 @@ export function Header({ isSidebarOpen, setIsSidebarOpen }:
   const isDocumentationPage = location.pathname === '/documentation';
   const isLicensePage = location.pathname === '/license';
   const isProjectsPage = location.pathname === '/projects';
+  const isProjectShowcasePage = location.pathname === '/projects/:owner/:repoName';
+  
   const scrollToSection = (e: React.MouseEvent, sectionId: string) => {
     e.preventDefault();
     const section = document.getElementById(sectionId);
@@ -36,7 +38,7 @@ export function Header({ isSidebarOpen, setIsSidebarOpen }:
         
         <nav className="flex items-center gap-8 ">
           
-          {!isDocumentationPage && !isLicensePage && !isProjectsPage && (
+          {!isDocumentationPage && !isLicensePage && !isProjectsPage && !isProjectShowcasePage && (
             <>
               <a href="#team-section" onClick={(e) => scrollToSection(e, 'team-section')} className="header-interactive text-lg text-white/90 hover:underline">Team</a>
               <a href="#blog-section" onClick={(e) => scrollToSection(e, 'blog-section')} className="header-interactive text-lg text-white/90 hover:underline">Blog</a>

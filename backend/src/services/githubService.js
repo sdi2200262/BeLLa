@@ -103,6 +103,100 @@ class GitHubService {
       throw new Error(error.response?.data?.message || 'Failed to fetch repository data');
     }
   }
+
+  async getFileTree(url) {
+    try {
+      const { username, repoName } = this.parseGithubRepoUrl(url);
+      
+      // First get the default branch
+      const repoResponse = await this.client.get(`/repos/${username}/${repoName}`);
+      const defaultBranch = repoResponse.data.default_branch;
+
+      // Get the tree with recursive option to get all files
+      const treeResponse = await this.client.get(
+        `/repos/${username}/${repoName}/git/trees/${defaultBranch}`,
+        { params: { recursive: 1 } }
+      );
+
+      // Transform the flat tree into a hierarchical structure
+      const root = { 
+        id: 'root', 
+        name: repoName, 
+        type: 'tree',
+        children: [] 
+      };
+      const map = { '': root };
+
+      treeResponse.data.tree.forEach(item => {
+        if (item.type !== 'blob' && item.type !== 'tree') return;
+
+        const parts = item.path.split('/');
+        let currentPath = '';
+
+        parts.forEach((part, index) => {
+          const parentPath = currentPath;
+          currentPath = currentPath ? `${currentPath}/${part}` : part;
+
+          if (!map[currentPath]) {
+            const node = {
+              id: currentPath,
+              name: part,
+              type: item.type,
+              path: currentPath,
+              children: [],
+            };
+
+            map[currentPath] = node;
+            if (map[parentPath]) {
+              map[parentPath].children.push(node);
+            }
+          }
+        });
+      });
+
+      // Sort the tree: directories first, then files, both alphabetically
+      const sortTree = (node) => {
+        if (node.children) {
+          node.children.sort((a, b) => {
+            if (a.type === b.type) {
+              return a.name.localeCompare(b.name);
+            }
+            return a.type === 'tree' ? -1 : 1;
+          });
+          node.children.forEach(sortTree);
+        }
+      };
+
+      sortTree(root);
+      return root;
+    } catch (error) {
+      console.error('Error fetching file tree:', error);
+      throw new Error('Failed to fetch repository file tree');
+    }
+  }
+
+  async getFileContent(url, path) {
+    try {
+      const { username, repoName } = this.parseGithubRepoUrl(url);
+      
+      // First get the default branch
+      const repoResponse = await this.client.get(`/repos/${username}/${repoName}`);
+      const defaultBranch = repoResponse.data.default_branch;
+
+      // Get the file content
+      const contentResponse = await this.client.get(
+        `/repos/${username}/${repoName}/contents/${path}`,
+        { params: { ref: defaultBranch } }
+      );
+
+      // GitHub returns base64 encoded content
+      const content = Buffer.from(contentResponse.data.content, 'base64').toString();
+      return { content };
+    } catch (error) {
+      console.error('Error fetching file content:', error);
+      throw new Error('Failed to fetch file content');
+    }
+  }
 }
 
 module.exports = new GitHubService(); 
