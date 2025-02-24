@@ -64,6 +64,7 @@ export function ProjectsPage() {
   const [error, setError] = useState<string | null>(null);
   const [hasInitialFetch, setHasInitialFetch] = useState(false);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalProjects, setTotalProjects] = useState(0);
   const [repoSuggestions, setRepoSuggestions] = useState<RepoSuggestion[]>([]);
   const [projectLimits, setProjectLimits] = useState({
     total: 0,
@@ -90,6 +91,7 @@ export function ProjectsPage() {
       const data = await handleResponse<PaginatedResponse>(response);
       setUserProjects(data.projects || []);
       setTotalPages(data.pagination?.pages || 1);
+      setTotalProjects(data.pagination?.total || 0);
       
       // Only set project limits if user is logged in
       if (user) {
@@ -111,7 +113,12 @@ export function ProjectsPage() {
     }
   };
 
-  // Fetch projects when tab changes or on mount
+  // Fetch projects on mount
+  useEffect(() => {
+    fetchUserProjects();
+  }, []);
+
+  // Re-fetch when tab changes
   useEffect(() => {
     if (activeTab === 'user') {
       fetchUserProjects();
@@ -420,22 +427,27 @@ export function ProjectsPage() {
 
           <TabsContent value="bella" className="mt-8">
             <div className="columns-3 gap-4">
-              {bellaProjects.map((project, index) => (
-                <div key={index} className="break-inside-avoid inline-block w-full align-top mb-4">
-                  <ProjectCard
-                    publicRepoUrl={project.repositoryUrl}
-                    className="w-full"
-                    cardClassName="bg-black/40 hover:bg-black/50 border-white/20 backdrop-blur-md h-fit"
-                    titleClassName="text-2xl font-bold"
-                    descriptionClassName="text-sm"
-                    statsClassName="grid-cols-2 gap-2"
-                    languageBarClassName="scale-90 origin-left"
-                    secondaryTextColor="text-white/60"
-                    hoverScale="hover:scale-[1.02] transition-all duration-300"
-                    iconSize={4}
-                  />
-                </div>
-              ))}
+              {bellaProjects.map((project, index) => {
+                // Get route based on project index
+                const route = index === 0 ? '/projects/bella/main' : '/projects/bella/nert';
+                return (
+                  <div key={index} className="break-inside-avoid inline-block w-full align-top mb-4">
+                    <ProjectCard
+                      publicRepoUrl={project.repositoryUrl}
+                      className="w-full"
+                      cardClassName="bg-black/40 hover:bg-black/50 border-white/20 backdrop-blur-md h-fit"
+                      titleClassName="text-2xl font-bold"
+                      descriptionClassName="text-sm"
+                      statsClassName="grid-cols-2 gap-2"
+                      languageBarClassName="scale-90 origin-left"
+                      secondaryTextColor="text-white/60"
+                      hoverScale="hover:scale-[1.02] transition-all duration-300"
+                      iconSize={4}
+                      onClick={() => navigate(route)}
+                    />
+                  </div>
+                );
+              })}
             </div>
           </TabsContent>
 

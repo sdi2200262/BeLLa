@@ -70,19 +70,19 @@ export function Sidebar({ isOpen }: { isOpen: boolean }) {
           <Button 
             variant="ghost" 
             className="rounded-[15px] p-2 w-full justify-start text-xl text-white hover:text-white hover:bg-white/5 transition-colors duration-100"
-            onClick={handleProfileClick}
-          >
-            {getProfileIcon()}
-            Profile
-          </Button>
-
-          <Button 
-            variant="ghost" 
-            className="rounded-[15px] p-2 w-full justify-start text-xl text-white hover:text-white hover:bg-white/5 transition-colors duration-100"
             onClick={() => handleNavigation('/components')}
           >
             <img src="/svg/stack/React.svg" alt="Components" className="size-6 mr-2" />
             Components
+          </Button>
+          
+          <Button 
+            variant="ghost" 
+            className="rounded-[15px] p-2 w-full justify-start text-xl text-white hover:text-white hover:bg-white/5 transition-colors duration-100"
+            onClick={handleProfileClick}
+          >
+            {getProfileIcon()}
+            Profile
           </Button>
            
           <div className="w-full h-[1px] bg-white/10 my-4"></div>

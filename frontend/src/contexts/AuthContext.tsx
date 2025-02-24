@@ -153,20 +153,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
+      // Clear session immediately
+      clearSession();
+
+      // Send logout request to backend (don't wait for it)
       const token = getAuthToken();
       if (token) {
-        await fetch(`${API_BASE_URL}/auth/logout`, {
+        fetch(`${API_BASE_URL}/auth/logout`, {
           ...defaultFetchOptions,
           method: 'POST',
           headers: {
             ...defaultFetchOptions.headers,
             Authorization: `Bearer ${token}`
-          } as HeadersInit
+          } as HeadersInit,
+          signal: AbortSignal.timeout(5000) // 5 second timeout for logout
+        }).catch(error => {
+          // Log error but don't affect the user experience
+          console.warn('Backend logout notification failed:', error);
         });
       }
     } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
+      console.warn('Logout error:', error);
+      // Ensure session is cleared even if there's an error
       clearSession();
     }
   };

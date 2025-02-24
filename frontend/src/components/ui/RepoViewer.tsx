@@ -1,5 +1,5 @@
 import { memo, useState, useCallback, lazy, Suspense, ReactNode } from 'react'
-import { ChevronRight, ChevronDown, Folder, FileText, FileIcon } from 'lucide-react'
+import { ChevronRight, ChevronDown, Folder, FileText, FileIcon, File } from 'lucide-react'
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from './resizable'
 import { cn } from '@/lib/utils'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
@@ -9,21 +9,21 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbSeparator } from 
 import remarkGfm from 'remark-gfm'
 import type { Components } from 'react-markdown'
 import type { DetailedHTMLProps, HTMLAttributes } from 'react'
+import { ScrollArea } from "./scroll-area"
 
 // Lazy load ReactMarkdown for better performance
 const ReactMarkdown = lazy(() => import('react-markdown'))
 
 // Types for file tree data structure
-export interface TreeNode {
-  path: string
+interface FileTreeNode {
   name: string
-  type: 'tree' | 'blob'
-  children?: TreeNode[]
-  content?: string
+  type: 'file' | 'dir'
+  path: string
+  children?: FileTreeNode[]
 }
 
 interface RepoViewerProps {
-  data?: TreeNode
+  data: FileTreeNode[]
   className?: string
   height?: string
 }
@@ -66,13 +66,13 @@ const TreeNode = memo(({
   onSelect,
   selectedPath
 }: { 
-  node: TreeNode
+  node: FileTreeNode
   depth: number
-  onSelect: (node: TreeNode) => void
+  onSelect: (node: FileTreeNode) => void
   selectedPath: string | null
 }) => {
   const [isExpanded, setIsExpanded] = useState(false)
-  const isFolder = node.type === 'tree'
+  const isFolder = node.type === 'dir'
   const isSelected = selectedPath === node.path
 
   const handleClick = useCallback(() => {
@@ -100,7 +100,7 @@ const TreeNode = memo(({
         ) : (
           <span className="w-4" />
         )}
-        {isFolder ? <Folder className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+        {isFolder ? <Folder className="h-4 w-4" /> : <File className="h-4 w-4" />}
         <span>{node.name}</span>
       </div>
 
@@ -124,11 +124,12 @@ const TreeNode = memo(({
 TreeNode.displayName = 'TreeNode'
 
 // Main RepoViewer component
-export function RepoViewer({ data, className, height = '600px' }: RepoViewerProps) {
-  const [selectedFile, setSelectedFile] = useState<TreeNode | null>(null)
+export function RepoViewer({ data, className, height = '500px' }: RepoViewerProps) {
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
+  const [selectedFile, setSelectedFile] = useState<FileTreeNode | null>(null)
   const [showMarkdown, setShowMarkdown] = useState(true)
 
-  const handleFileSelect = useCallback((node: TreeNode) => {
+  const handleFileSelect = useCallback((node: FileTreeNode) => {
     setSelectedFile(node)
     // If it's a markdown file, default to showing markdown view
     if (node.name.toLowerCase().endsWith('.md')) {
@@ -138,6 +139,53 @@ export function RepoViewer({ data, className, height = '600px' }: RepoViewerProp
 
   const isMarkdownFile = selectedFile?.name.toLowerCase().endsWith('.md')
   const language = selectedFile ? getLanguageFromFileName(selectedFile.name) : 'plaintext'
+
+  const toggleFolder = (path: string) => {
+    const newExpanded = new Set(expandedFolders)
+    if (newExpanded.has(path)) {
+      newExpanded.delete(path)
+    } else {
+      newExpanded.add(path)
+    }
+    setExpandedFolders(newExpanded)
+  }
+
+  const renderNode = (node: FileTreeNode, depth: number = 0) => {
+    const isExpanded = expandedFolders.has(node.path)
+    const paddingLeft = `${depth * 1.5}rem`
+
+    if (node.type === 'dir') {
+      return (
+        <div key={node.path}>
+          <button
+            onClick={() => toggleFolder(node.path)}
+            className="w-full flex items-center gap-2 py-1.5 px-2 hover:bg-white/5 rounded-lg transition-colors"
+            style={{ paddingLeft }}
+          >
+            {isExpanded ? (
+              <ChevronDown className="w-4 h-4 text-[#0066FF]" />
+            ) : (
+              <ChevronRight className="w-4 h-4 text-[#0066FF]" />
+            )}
+            <Folder className="w-4 h-4 text-[#0066FF]" />
+            <span className="text-sm text-white/80">{node.name}</span>
+          </button>
+          {isExpanded && node.children?.map(child => renderNode(child, depth + 1))}
+        </div>
+      )
+    }
+
+    return (
+      <div
+        key={node.path}
+        className="flex items-center gap-2 py-1.5 px-2 hover:bg-white/5 rounded-lg transition-colors"
+        style={{ paddingLeft }}
+      >
+        <File className="w-4 h-4 text-white/40" />
+        <span className="text-sm text-white/60">{node.name}</span>
+      </div>
+    )
+  }
 
   // Generate breadcrumb items from path
   const getBreadcrumbItems = (path: string) => {
@@ -325,133 +373,13 @@ export function RepoViewer({ data, className, height = '600px' }: RepoViewerProp
 
   return (
     <div className={cn('border border-white/10 rounded-lg overflow-hidden', className)} style={{ height }}>
-      <ResizablePanelGroup direction="horizontal">
-        {/* File tree panel */}
-        <ResizablePanel defaultSize={25} minSize={20} maxSize={40}>
-          <div className="h-full border-r border-white/10 bg-black/40">
-            <div className="p-2 border-b border-white/10">
-              <h3 className="text-sm font-medium text-white/80">Files</h3>
-            </div>
-            <div className="overflow-auto" style={{ height: 'calc(100% - 37px)' }}>
-              <TreeNode 
-                node={data} 
-                depth={0} 
-                onSelect={handleFileSelect}
-                selectedPath={selectedFile?.path || null}
-              />
-            </div>
+      <ScrollArea style={{ height }} className="p-4">
+        {data?.map(node => renderNode(node)) || (
+          <div className="text-center text-white/40 py-8">
+            No files to display
           </div>
-        </ResizablePanel>
-
-        <ResizableHandle withHandle />
-
-        {/* File content panel */}
-        <ResizablePanel defaultSize={75} minSize={60} maxSize={80}>
-          <div className="h-full bg-black/40">
-            {selectedFile ? (
-              <>
-                <div className="p-2 border-b border-white/10 flex justify-between items-center">
-                  <Breadcrumb>
-                    <BreadcrumbList>
-                      {getBreadcrumbItems(selectedFile.path)}
-                    </BreadcrumbList>
-                  </Breadcrumb>
-                  {isMarkdownFile && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-white/60">
-                        {showMarkdown ? 'Preview' : 'Source'}
-                      </span>
-                      <Switch
-                        checked={showMarkdown}
-                        onCheckedChange={setShowMarkdown}
-                        className="data-[state=checked]:bg-white/20"
-                      />
-                    </div>
-                  )}
-                </div>
-                <div className="overflow-auto p-4" style={{ height: 'calc(100% - 37px)' }}>
-                  {isMarkdownFile && showMarkdown ? (
-                    <Suspense fallback={<div className="text-white/60">Loading markdown...</div>}>
-                      <div className={cn(
-                        // Base styles
-                        "prose prose-invert max-w-none",
-                        // Spacing and layout
-                        "space-y-4",
-                        // Headings
-                        "prose-h1:text-2xl prose-h1:font-bold prose-h1:mb-4 prose-h1:pb-2 prose-h1:border-b prose-h1:border-white/10",
-                        "prose-h2:text-xl prose-h2:font-bold prose-h2:mb-4 prose-h2:pb-2 prose-h2:border-b prose-h2:border-white/10",
-                        "prose-h3:text-lg prose-h3:font-bold prose-h3:mb-3",
-                        "prose-h4:text-base prose-h4:font-bold prose-h4:mb-3",
-                        // Text elements
-                        "prose-p:text-white/90 prose-p:leading-7 prose-p:mb-4",
-                        "prose-a:text-blue-400 prose-a:no-underline hover:prose-a:underline",
-                        "prose-strong:text-white prose-strong:font-semibold",
-                        "prose-em:text-white/90 prose-em:italic",
-                        // Code blocks
-                        "prose-pre:bg-black/20 prose-pre:border prose-pre:border-white/10 prose-pre:rounded-lg prose-pre:my-4",
-                        "prose-code:text-white prose-code:bg-white/10 prose-code:rounded prose-code:px-1.5 prose-code:py-0.5 prose-code:text-sm prose-code:font-mono",
-                        "prose-code:before:content-[''] prose-code:after:content-['']",
-                        // Lists - Enhanced styling
-                        "prose-ul:my-4 prose-ul:list-disc prose-ul:pl-6",
-                        "prose-ol:my-4 prose-ol:list-decimal prose-ol:pl-6",
-                        "prose-li:text-white/90",
-                        // Nested list styling
-                        "[&_ul_ul]:mt-2 [&_ul_ol]:mt-2 [&_ol_ul]:mt-2 [&_ol_ol]:mt-2",
-                        "[&_ul_ul]:mb-0 [&_ul_ol]:mb-0 [&_ol_ul]:mb-0 [&_ol_ol]:mb-0",
-                        // List markers
-                        "prose-ul:marker:text-white/50",
-                        "prose-ol:marker:text-white/70",
-                        // Blockquotes
-                        "prose-blockquote:text-white/80 prose-blockquote:border-l-4 prose-blockquote:border-white/20 prose-blockquote:bg-white/5",
-                        "prose-blockquote:rounded-r prose-blockquote:py-1 prose-blockquote:px-4 prose-blockquote:not-italic prose-blockquote:my-4",
-                        // Tables
-                        "prose-table:text-white/90 prose-table:border prose-table:border-white/10 prose-table:my-4",
-                        "prose-th:bg-white/5 prose-th:text-white prose-th:font-semibold prose-th:p-2 prose-th:border prose-th:border-white/10",
-                        "prose-td:p-2 prose-td:border prose-td:border-white/10",
-                        // Remove margin from first and last elements
-                        "[&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
-                      )}>
-                        <ReactMarkdown
-                          remarkPlugins={[remarkGfm]}
-                          components={markdownComponents}
-                        >
-                          {selectedFile.content || ''}
-                        </ReactMarkdown>
-                      </div>
-                    </Suspense>
-                  ) : (
-                    <SyntaxHighlighter
-                      language={language}
-                      style={tomorrow}
-                      customStyle={{
-                        margin: 0,
-                        background: 'transparent',
-                        fontSize: '0.9rem',
-                        whiteSpace: 'pre-wrap',
-                        wordBreak: 'keep-all'
-                      }}
-                      showLineNumbers
-                      lineNumberStyle={{
-                        minWidth: '3em',
-                        paddingRight: '1em',
-                        color: 'rgba(255, 255, 255, 0.2)',
-                      }}
-                      wrapLongLines={true}
-                      preserveWhitespace={true}
-                    >
-                      {selectedFile.content || ''}
-                    </SyntaxHighlighter>
-                  )}
-                </div>
-              </>
-            ) : (
-              <div className="flex items-center justify-center h-full text-white/60">
-                <p>Select a file to view its contents</p>
-              </div>
-            )}
-          </div>
-        </ResizablePanel>
-      </ResizablePanelGroup>
+        )}
+      </ScrollArea>
     </div>
   )
 } 

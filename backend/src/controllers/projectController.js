@@ -85,7 +85,8 @@ const projectController = {
         });
       }
 
-      const query = { status: 'active' };
+      // Include both active and error status projects
+      const query = { status: { $in: ['active', 'error'] } };
       if (search) {
         query.repositoryUrl = { $regex: search, $options: 'i' };
       }
@@ -93,7 +94,7 @@ const projectController = {
       const [totalProjects, projects] = await Promise.all([
         Project.countDocuments(query),
         Project.find(query)
-          .select('repositoryUrl uploadedBy metadata.language metadata.stars createdAt')
+          .select('repositoryUrl uploadedBy metadata.language metadata.stars createdAt status')
           .lean()
           .sort({ createdAt: -1 })
           .skip((page - 1) * LIMITS.PAGE_SIZE)
@@ -216,6 +217,7 @@ const projectController = {
         auth: process.env.GITHUB_TOKEN
       });
 
+      // Fetch basic repo data
       const repoResponse = await octokit.request('GET /repos/{owner}/{repo}', {
         owner,
         repo,
@@ -233,7 +235,7 @@ const projectController = {
         }
       });
 
-      // Fetch commit count
+      // Fetch commit count using pagination
       const commitsResponse = await octokit.request('GET /repos/{owner}/{repo}/commits', {
         owner,
         repo,
@@ -243,10 +245,21 @@ const projectController = {
         }
       });
 
+      // Get total commit count from Link header
+      let commitCount = 0;
+      const linkHeader = commitsResponse.headers.link;
+      if (linkHeader) {
+        const matches = linkHeader.match(/page=(\d+)>; rel="last"/);
+        if (matches) {
+          commitCount = parseInt(matches[1], 10);
+        }
+      }
+
       const data = {
         ...repoResponse.data,
         languages: languagesResponse.data,
-        commit_count: parseInt(commitsResponse.headers['last-page'] || '0', 10) || 0
+        commit_count: commitCount,
+        forks_count: repoResponse.data.forks_count || 0
       };
 
       // Cache the result for 1 hour

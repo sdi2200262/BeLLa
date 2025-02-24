@@ -35,10 +35,15 @@ export function Header({ isSidebarOpen, setIsSidebarOpen }:
 
   // Memoized navigation handler
   const handleNavigation = useCallback((path: string) => {
-    startTransition(() => {
-      navigate(path);
-    });
-  }, [navigate]);
+    if (isLandingPage && path === '/') {
+      // If we're on landing page and clicking home, scroll to top
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      startTransition(() => {
+        navigate(path);
+      });
+    }
+  }, [navigate, isLandingPage]);
 
   const scrollToSection = (e: React.MouseEvent, sectionId: string) => {
     e.preventDefault();
@@ -85,11 +90,9 @@ export function Header({ isSidebarOpen, setIsSidebarOpen }:
           
           <button 
             onClick={() => handleNavigation('/')} 
-            className="header-interactive"
+            className="header-interactive hover:opacity-80"
           >
-            <a href="/" className="hover:opacity-80">
-              <img src="/svg/BeLLa/BeLLa-Monogram.svg" alt="BeLLa Logo" className="h-8" />
-            </a>
+            <img src="/svg/BeLLa/BeLLa-Monogram.svg" alt="BeLLa Logo" className="h-8" />
           </button>
         </div>
         

@@ -14,7 +14,15 @@ import {
   GitBranch,
   CircleDot,
   Loader2,
-  Home
+  Home,
+  GithubIcon,
+  Code2,
+  GitPullRequest,
+  CheckCircle2,
+  XCircle,
+  Terminal,
+  Copy,
+  Check
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
@@ -31,6 +39,8 @@ import {
   BreadcrumbSeparator,
 } from "../ui/breadcrumb";
 import { API_BASE_URL, defaultFetchOptions, handleResponse } from "@/config/api";
+import { Button } from "../ui/button";
+import CodeBlock from "../ui/CodeBlock";
 
 interface Repository {
   name: string;
@@ -52,7 +62,7 @@ interface Repository {
   default_branch: string;
   html_url: string;
   languages: { [key: string]: number };
-  commitCount: number;
+  commit_count: number;
   fileTree?: any;
 }
 
@@ -171,6 +181,50 @@ export function ProjectShowcasePage() {
     fetchFileContent();
   }, [selectedFile, owner, repoName]);
 
+  // Add this new function for copying text
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+      return false;
+    }
+  };
+
+  // Add this new component for command blocks with copy button
+  const CommandBlock = ({ command }: { command: string }) => {
+    const [copied, setCopied] = useState(false);
+
+    const handleCopy = async () => {
+      const success = await copyToClipboard(command);
+      if (success) {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+    };
+
+    return (
+      <div className="mt-3 bg-black/40 rounded-lg flex items-center">
+        <div className="flex-1 p-4 font-mono text-sm text-white/80">
+          {command}
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="mr-2 h-8 w-8 text-white/60 hover:text-[#0066FF] hover:bg-[#0066FF]/10 transition-all duration-300"
+          onClick={handleCopy}
+        >
+          {copied ? (
+            <Check className="h-4 w-4" />
+          ) : (
+            <Copy className="h-4 w-4" />
+          )}
+        </Button>
+      </div>
+    );
+  };
+
   if (error) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
@@ -219,11 +273,11 @@ export function ProjectShowcasePage() {
     <div className="min-h-screen bg-black text-white">
       <div className="border-b border-white/10 bg-black/40 backdrop-blur-xl">
         <div className="max-w-6xl mx-auto px-6 py-4">
-      {/* Breadcrumb Navigation */}
+          {/* Breadcrumb Navigation */}
           <Breadcrumb>
             <BreadcrumbList>
               <BreadcrumbItem>
-                <Link to="/projects" className="text-white/60 hover:text-white">
+                <Link to="/projects" className="text-white/60 hover:text-white transition-colors duration-300">
                   Projects
                 </Link>
               </BreadcrumbItem>
@@ -235,26 +289,27 @@ export function ProjectShowcasePage() {
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
-        </div>
-      
 
-      {/* Header */}
-      
-        <div className="max-w-6xl mx-auto px-6 py-6">
-          <div className="flex items-center gap-4">
-            <img 
-              src={repository.owner.avatar_url} 
-              alt={repository.owner.login}
-              className="w-12 h-12 rounded-full"
-            />
+          {/* Header */}
+          <div className="mt-6 flex items-center gap-6">
+            <div className="relative group">
+              <img 
+                src={repository.owner.avatar_url} 
+                alt={repository.owner.login}
+                className="w-16 h-16 rounded-full ring-2 ring-white/10 transition-all duration-300 group-hover:ring-[#0066FF]"
+              />
+              <div className="absolute -bottom-2 -right-2 bg-[#0066FF]/10 p-2 rounded-full ring-2 ring-black transition-all duration-300 group-hover:bg-[#0066FF]/20">
+                <GithubIcon className="w-4 h-4 text-[#0066FF]" />
+              </div>
+            </div>
             <div>
-              <h1 className="text-2xl font-bold flex items-center gap-2">
+              <h1 className="text-2xl font-bold flex items-center gap-3">
                 {repository.name}
                 <a 
                   href={repository.html_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-white/60 hover:text-white"
+                  className="text-white/60 hover:text-[#0066FF] transition-colors duration-300"
                 >
                   <LinkIcon className="w-4 h-4" />
                 </a>
@@ -268,79 +323,155 @@ export function ProjectShowcasePage() {
       {/* Main Content */}
       <div className="max-w-6xl mx-auto px-6 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-          <TabsList className="bg-white/5 border-white/10">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="files">Files</TabsTrigger>
-            <TabsTrigger value="statistics">Statistics</TabsTrigger>
-            <TabsTrigger value="activity">Activity</TabsTrigger>
+          <TabsList className="w-full justify-start bg-black/40 border border-white/10 rounded-lg p-1">
+            <TabsTrigger 
+              value="overview" 
+              className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/60 transition-all duration-200"
+            >
+              Overview
+            </TabsTrigger>
+            <TabsTrigger 
+              value="files"
+              className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/60 transition-all duration-200"
+            >
+              Files
+            </TabsTrigger>
+            <TabsTrigger 
+              value="statistics"
+              className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/60 transition-all duration-200"
+            >
+              Statistics
+            </TabsTrigger>
+            <TabsTrigger 
+              value="contribute"
+              className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-white/60 transition-all duration-200"
+            >
+              Contribute
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="bg-black/40 border-white/10">
+              {/* Repository Info Card */}
+              <Card className="bg-black/40 border-white/10 backdrop-blur-xl">
                 <CardHeader>
-                  <CardTitle>Repository Info</CardTitle>
+                  <div className="flex items-center gap-3">
+                    <div className="bg-[#0066FF]/10 p-2 rounded-lg">
+                      <GithubIcon className="text-[#0066FF] w-5 h-5" />
+                    </div>
+                    <CardTitle className="text-xl text-white">Repository Info</CardTitle>
+                  </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-6">
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="flex items-center gap-2 text-white/70">
-                      <Star className="w-4 h-4" />
-                      <span>{repository.stargazers_count} stars</span>
+                    <div className="relative overflow-hidden bg-white/5 rounded-lg p-4 transition-all duration-300 hover:bg-white/10 group">
+                      <div className="relative z-10">
+                        <div className="text-2xl font-bold text-white group-hover:text-[#0066FF] transition-colors duration-300">
+                          {repository.stargazers_count}
+                        </div>
+                        <div className="text-sm text-white/60">Stars</div>
+                      </div>
+                      <Star className="absolute -right-4 -bottom-4 w-20 h-20 text-white/5 group-hover:text-[#0066FF]/5 transition-colors duration-300" />
                     </div>
-                    <div className="flex items-center gap-2 text-white/70">
-                      <GitFork className="w-4 h-4" />
-                      <span>{repository.forks_count} forks</span>
+                    <div className="relative overflow-hidden bg-white/5 rounded-lg p-4 transition-all duration-300 hover:bg-white/10 group">
+                      <div className="relative z-10">
+                        <div className="text-2xl font-bold text-white group-hover:text-[#0066FF] transition-colors duration-300">
+                          {repository.forks_count}
+                        </div>
+                        <div className="text-sm text-white/60">Forks</div>
+                      </div>
+                      <GitFork className="absolute -right-4 -bottom-4 w-20 h-20 text-white/5 group-hover:text-[#0066FF]/5 transition-colors duration-300" />
                     </div>
-                    <div className="flex items-center gap-2 text-white/70">
-                      <Eye className="w-4 h-4" />
-                      <span>{repository.watchers_count} watchers</span>
+                    <div className="relative overflow-hidden bg-white/5 rounded-lg p-4 transition-all duration-300 hover:bg-white/10 group">
+                      <div className="relative z-10">
+                        <div className="text-2xl font-bold text-white group-hover:text-[#0066FF] transition-colors duration-300">
+                          {repository.watchers_count}
+                        </div>
+                        <div className="text-sm text-white/60">Watchers</div>
+                      </div>
+                      <Eye className="absolute -right-4 -bottom-4 w-20 h-20 text-white/5 group-hover:text-[#0066FF]/5 transition-colors duration-300" />
                     </div>
-                    <div className="flex items-center gap-2 text-white/70">
-                      <AlertCircle className="w-4 h-4" />
-                      <span>{repository.open_issues_count} issues</span>
+                    <div className="relative overflow-hidden bg-white/5 rounded-lg p-4 transition-all duration-300 hover:bg-white/10 group">
+                      <div className="relative z-10">
+                        <div className="text-2xl font-bold text-white group-hover:text-[#0066FF] transition-colors duration-300">
+                          {repository.open_issues_count}
+                        </div>
+                        <div className="text-sm text-white/60">Issues</div>
+                      </div>
+                      <AlertCircle className="absolute -right-4 -bottom-4 w-20 h-20 text-white/5 group-hover:text-[#0066FF]/5 transition-colors duration-300" />
                     </div>
                   </div>
-                  <div className="pt-4 border-t border-white/10">
+
+                  <div className="space-y-4 pt-4 border-t border-white/10">
                     <div className="flex items-center gap-2 text-white/70">
-                      <GitBranch className="w-4 h-4" />
+                      <GitBranch className="w-4 h-4 text-[#0066FF]" />
                       <span>Default branch: {repository.default_branch}</span>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2 text-white/70">
-                    <Scale className="w-4 h-4" />
-                    <span>License: {repository.license?.name || "No license"}</span>
+                    <div className="flex items-center gap-2 text-white/70">
+                      <Scale className="w-4 h-4 text-[#0066FF]" />
+                      <span>License: {repository.license?.name || "No license"}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-white/70">
+                      <GitCommit className="w-4 h-4 text-[#0066FF]" />
+                      <span>Total commits: {repository.commit_count?.toLocaleString() || 0}</span>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-black/40 border-white/10">
+              {/* Timeline Card */}
+              <Card className="bg-black/40 border-white/10 backdrop-blur-xl">
                 <CardHeader>
-                  <CardTitle>Timeline</CardTitle>
+                  <div className="flex items-center gap-3">
+                    <div className="bg-[#0066FF]/10 p-2 rounded-lg">
+                      <Clock className="text-[#0066FF] w-5 h-5" />
+                    </div>
+                    <CardTitle className="text-xl text-white  ">Timeline</CardTitle>
+                  </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center gap-2 text-white/70">
-                    <Clock className="w-4 h-4" />
-                    <span>Created: {formatDate(repository.created_at)}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-white/70">
-                    <Clock className="w-4 h-4" />
-                    <span>Last updated: {formatDate(repository.updated_at)}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-white/70">
-                    <Clock className="w-4 h-4" />
-                    <span>Last push: {formatDate(repository.pushed_at)}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-white/70">
-                    <GitCommit className="w-4 h-4" />
-                    <span>Total commits: {repository.commitCount}</span>
+                <CardContent className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="relative overflow-hidden bg-white/5 rounded-lg p-4 transition-all duration-300 hover:bg-white/10 group">
+                      <div className="flex items-center gap-2 text-white/70">
+                        <Clock className="w-4 h-4 text-[#0066FF]" />
+                        <div>
+                          <div className="text-sm text-white/60">Created</div>
+                          <div className="text-white">{formatDate(repository.created_at)}</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="relative overflow-hidden bg-white/5 rounded-lg p-4 transition-all duration-300 hover:bg-white/10 group">
+                      <div className="flex items-center gap-2 text-white/70">
+                        <Clock className="w-4 h-4 text-[#0066FF]" />
+                        <div>
+                          <div className="text-sm text-white/60">Last Updated</div>
+                          <div className="text-white">{formatDate(repository.updated_at)}</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="relative overflow-hidden bg-white/5 rounded-lg p-4 transition-all duration-300 hover:bg-white/10 group">
+                      <div className="flex items-center gap-2 text-white/70">
+                        <Clock className="w-4 h-4 text-[#0066FF]" />
+                        <div>
+                          <div className="text-sm text-white/60">Last Push</div>
+                          <div className="text-white">{formatDate(repository.pushed_at)}</div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            <Card className="bg-black/40 border-white/10">
+            {/* Languages Card */}
+            <Card className="bg-black/40 border-white/10 backdrop-blur-xl">
               <CardHeader>
-                <CardTitle>Languages</CardTitle>
+                <div className="flex items-center gap-3">
+                  <div className="bg-[#0066FF]/10 p-2 rounded-lg">
+                    <FileCode className="text-[#0066FF] w-5 h-5" />
+                  </div>
+                  <CardTitle className="text-xl text-white">Languages</CardTitle>
+                </div>
               </CardHeader>
               <CardContent>
                 <LanguageBar 
@@ -352,7 +483,7 @@ export function ProjectShowcasePage() {
           </TabsContent>
 
           <TabsContent value="files" className="space-y-6">
-            <Card className="bg-black/40 border-white/10">
+            <Card className="bg-black/40 border-white/10 backdrop-blur-xl">
               <CardContent className="p-0">
                 <RepoViewer
                   data={repository.fileTree}
@@ -364,40 +495,138 @@ export function ProjectShowcasePage() {
           </TabsContent>
 
           <TabsContent value="statistics" className="space-y-6">
-            <Card className="bg-black/40 border-white/10">
+            <Card className="bg-black/40 border-white/10 backdrop-blur-xl">
               <CardHeader>
-                <CardTitle>Contribution Statistics</CardTitle>
+                <div className="flex items-center gap-3">
+                  <div className="bg-[#0066FF]/10 p-2 rounded-lg">
+                    <Users className="text-[#0066FF] w-5 h-5" />
+                  </div>
+                  <CardTitle className="text-xl text-white">Contribution Statistics</CardTitle>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-center gap-2 text-white/70">
-                    <Users className="w-4 h-4" />
-                    <span>Contributors: Coming soon</span>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="relative overflow-hidden bg-white/5 rounded-lg p-4 transition-all duration-300 hover:bg-white/10 group">
+                    <div className="flex items-center gap-2 text-white/70">
+                      <Users className="w-4 h-4 text-[#0066FF]" />
+                      <span>Contributors: Coming soon</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 text-white/70">
-                    <GitCommit className="w-4 h-4" />
-                    <span>Commits: {repository.commitCount}</span>
+                  <div className="relative overflow-hidden bg-white/5 rounded-lg p-4 transition-all duration-300 hover:bg-white/10 group">
+                    <div className="flex items-center gap-2 text-white/70">
+                      <GitCommit className="w-4 h-4 text-[#0066FF]" />
+                      <span>Commits: {repository.commit_count}</span>
+                    </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="activity" className="space-y-6">
-            <Card className="bg-black/40 border-white/10">
+          <TabsContent value="contribute" className="space-y-6">
+            <Card className="bg-black/40 border-white/10 backdrop-blur-xl">
               <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
+                <div className="flex items-center gap-3">
+                  <div className="bg-[#0066FF]/10 p-2 rounded-lg">
+                    <GitPullRequest className="text-[#0066FF] w-5 h-5" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl text-white">How to Contribute</CardTitle>
+                    <CardDescription className="text-white/60">
+                      Follow these steps to contribute to {repository.name}
+                    </CardDescription>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {[...Array(5)].map((_, i) => (
-                  <div key={i} className="flex items-center gap-3 text-white/70 border-b border-white/10 last:border-0 pb-3">
-                    <CircleDot className="w-4 h-4 text-white/40" />
-                    <div className="flex-1">
-                      <p className="text-sm">Commit activity data would go here</p>
-                      <p className="text-xs text-white/40">Time information</p>
+              <CardContent>
+                <div className="space-y-6">
+                  {/* Step 1: Clone */}
+                  <div className="relative overflow-hidden bg-white/5 rounded-lg p-6 transition-all duration-300 hover:bg-white/10 group">
+                    <div className="flex items-start gap-4">
+                      <div className="bg-[#0066FF]/10 p-2 rounded-lg">
+                        <Code2 className="text-[#0066FF] w-5 h-5" />
+                      </div>
+                      <div className="space-y-2 flex-1">
+                        <h3 className="text-lg font-semibold text-white">1. Clone the Repository</h3>
+                        <p className="text-white/60">First, clone the repository to your local machine:</p>
+                        <CodeBlock command={`git clone ${repository.html_url}`} />
+                      </div>
                     </div>
                   </div>
-                ))}
+
+                  {/* Step 2: Branch */}
+                  <div className="relative overflow-hidden bg-white/5 rounded-lg p-6 transition-all duration-300 hover:bg-white/10 group">
+                    <div className="flex items-start gap-4">
+                      <div className="bg-[#0066FF]/10 p-2 rounded-lg">
+                        <GitBranch className="text-[#0066FF] w-5 h-5" />
+                      </div>
+                      <div className="space-y-2 flex-1">
+                        <h3 className="text-lg font-semibold text-white">2. Create a Branch</h3>
+                        <p className="text-white/60">Create a new branch for your feature or fix:</p>
+                        <CodeBlock command="git checkout -b feature/your-feature-name" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Step 3: Make Changes */}
+                  <div className="relative overflow-hidden bg-white/5 rounded-lg p-6 transition-all duration-300 hover:bg-white/10 group">
+                    <div className="flex items-start gap-4">
+                      <div className="bg-[#0066FF]/10 p-2 rounded-lg">
+                        <Terminal className="text-[#0066FF] w-5 h-5" />
+                      </div>
+                      <div className="space-y-2 flex-1">
+                        <h3 className="text-lg font-semibold text-white">3. Make Your Changes</h3>
+                        <p className="text-white/60">Make and commit your changes:</p>
+                        <div className="mt-3 space-y-2">
+                          <CodeBlock command="git add ." />
+                          <CodeBlock command='git commit -m "Description of your changes"' />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Step 4: Push & PR */}
+                  <div className="relative overflow-hidden bg-white/5 rounded-lg p-6 transition-all duration-300 hover:bg-white/10 group">
+                    <div className="flex items-start gap-4">
+                      <div className="bg-[#0066FF]/10 p-2 rounded-lg">
+                        <GitPullRequest className="text-[#0066FF] w-5 h-5" />
+                      </div>
+                      <div className="space-y-2 flex-1">
+                        <h3 className="text-lg font-semibold text-white">4. Push and Create Pull Request</h3>
+                        <p className="text-white/60">Push your changes and create a pull request:</p>
+                        <CodeBlock command="git push origin feature/your-feature-name" />
+                        <p className="text-white/60 mt-3">Then visit {repository.html_url} to create a pull request.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Review Process */}
+                  <div className="relative overflow-hidden bg-white/5 rounded-lg p-6 transition-all duration-300 hover:bg-white/10 group">
+                    <div className="flex items-start gap-4">
+                      <div className="bg-[#0066FF]/10 p-2 rounded-lg">
+                        <CheckCircle2 className="text-[#0066FF] w-5 h-5" />
+                      </div>
+                      <div className="space-y-2 flex-1">
+                        <h3 className="text-lg font-semibold text-white">Review Process</h3>
+                        <p className="text-white/60">After submitting your pull request:</p>
+                        <ul className="mt-3 space-y-2 text-white/60">
+                          <li className="flex items-center gap-2">
+                            <CheckCircle2 className="w-4 h-4 text-[#0066FF]" />
+                            The repository owner will review your changes
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <CheckCircle2 className="w-4 h-4 text-[#0066FF]" />
+                            You may receive feedback requesting changes
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <CheckCircle2 className="w-4 h-4 text-[#0066FF]" />
+                            Once approved, your changes will be merged
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

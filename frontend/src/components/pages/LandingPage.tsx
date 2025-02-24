@@ -1,12 +1,22 @@
 import { Button } from "../ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../ui/card";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { fetchContributors, type Contributor } from "@/services/contributorsService";
 import { Loader2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export function LandingPage() {
   const [contributors, setContributors] = useState<Contributor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
+  const [isPending, startTransition] = useTransition();
+
+  // Helper function for smooth navigation
+  const handleNavigation = (path: string) => {
+    startTransition(() => {
+      navigate(path);
+    });
+  };
 
   useEffect(() => {
     const loadContributors = async () => {
@@ -38,23 +48,25 @@ export function LandingPage() {
               Open source development tools and SaaS.
             </p>
             
-            <a 
-              href="https://github.com/sdi2200262/BeLLa" 
-              className="block transition-all duration-300"
+            <Button 
+              variant="default" 
+              size="lg" 
+              className="rounded-[55px] bg-black mb-10 mt-10 px-8 py-4 text-xl transition-all duration-300 hover:scale-105 hover:bg-transparent"
+              onClick={() => window.open('https://github.com/sdi2200262/BeLLa', '_blank')}
             >
               <img 
                 src="/svg/github/Github-Icon.svg" 
                 alt="Github Icon" 
                 className="github-icon mx-auto hover:scale-110 duration-300" 
               />
-            </a>
+            </Button>
             
             <div className="button-container">
               <Button 
                 variant="default" 
                 size="lg" 
                 className="rounded-[55px] border border-white bg-black px-8 py-4 text-xl transition-all duration-300 hover:scale-105"
-                onClick={() => window.location.href = '/projects'}
+                onClick={() => handleNavigation('/projects')}
               >
                 See Projects
               </Button>
@@ -62,7 +74,7 @@ export function LandingPage() {
                 variant="default" 
                 size="lg" 
                 className="rounded-[55px] border border-white bg-white text-black px-8 py-4 text-xl transition-all duration-300 hover:scale-105 hover:bg-white"
-                onClick={() => window.location.href = '/documentation'}
+                onClick={() => handleNavigation('/projects/bella/main')}
               >
                 Learn More
               </Button>
@@ -78,8 +90,9 @@ export function LandingPage() {
           </div>
         </div>
 
-        <div className="Product-section bg-gray">
-          <div className="content-center">
+        <div className="Product-section relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-[#0066FF]/20 via-purple-500/10 to-transparent" />
+          <div className="relative content-center">
             <img 
               src="/svg/BeLLa/BeLLa-NERT.svg" 
               alt="Product Logo" 
@@ -102,7 +115,7 @@ export function LandingPage() {
                 variant="default" 
                 size="lg" 
                 className="rounded-[55px] border border-white bg-[#0066FF] px-8 py-4 text-xl transition-all duration-300 hover:scale-105 hover:bg-[#0066FF] group"
-                onClick={() => window.location.href = 'https://github.com/sdi2200262/BeLLa-NERT'}
+                onClick={() => window.open('https://github.com/sdi2200262/BeLLa-NERT', '_blank')}
               >
                 View on Github 
                 <img 
@@ -115,7 +128,7 @@ export function LandingPage() {
                 variant="default" 
                 size="lg" 
                 className="rounded-[55px] border border-white bg-white text-black px-8 py-4 text-xl transition-all duration-300 hover:scale-105 hover:bg-white group"
-                onClick={() => window.location.href = '/documentation'}
+                onClick={() => handleNavigation('/projects/bella/nert')}
               >
                 Get Started 
                 <img 
@@ -185,8 +198,9 @@ export function LandingPage() {
 
       <div className="w-full h-[1px] bg-white/10"></div>
 
-      <div id="github-contributors-section" className="Github-contributors-section">
-        <div className="content-center">
+      <div id="github-contributors-section" className="Github-contributors-section relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0066FF]/20 via-purple-500/10 to-transparent" />
+        <div className="relative content-center">
           <h2 className="text-5xl font-bold text-white">BeLLa Contributors</h2>
           <img src="/svg/general/Git-Pull-Request.svg" alt="Github Contributors" className="github-contributors-image size-14" />
           <div className="w-[300px] h-[1px] bg-white/10"></div>
@@ -230,9 +244,12 @@ export function LandingPage() {
 
           <div className="flex gap-2 mt-40 text-white/80 text-center">
             <p className="text-lg">You can join BeLLa Contributors by contributing</p>
-            <a href="/projects" className="text-lg font-bold hover:scale-105 transition-all">
+            <button 
+              onClick={() => handleNavigation('/projects')}
+              className="text-lg font-bold hover:scale-105 transition-all"
+            >
               to any BeLLa project.
-            </a>
+            </button>
           </div>
         </div>
       </div>

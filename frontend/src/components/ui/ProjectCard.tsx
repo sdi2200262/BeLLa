@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Star, GitFork, Scale, GitCommit, FileCode, GithubIcon } from "lucide-react";
+import { Star, GitFork, Scale, GitCommit, FileCode, GithubIcon, AlertCircle } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "./card";
 import { LanguageBar } from "./LanguageBar";
 import { cn } from "@/lib/utils";
@@ -22,6 +22,10 @@ interface Repository {
   languages: Record<string, number>;
   html_url: string;
   commit_count?: number;
+  status?: string;
+  metadata?: {
+    error?: string;
+  };
 }
 
 interface ProjectResponse {
@@ -44,6 +48,7 @@ interface ProjectCardProps {
   secondaryTextColor?: string;
   hoverScale?: string;
   iconSize?: number;
+  onClick?: () => void;
 }
 
 export function ProjectCard({ 
@@ -59,7 +64,8 @@ export function ProjectCard({
   textColor = "text-white",
   secondaryTextColor = "text-white/70",
   hoverScale = "hover:scale-105",
-  iconSize = 4
+  iconSize = 4,
+  onClick
 }: ProjectCardProps) {
   const navigate = useNavigate();
   const [repository, setRepository] = useState<Repository | null>(null);
@@ -124,7 +130,7 @@ export function ProjectCard({
 
       // If we get here, all retries failed
       setRepository(null);
-      setError(lastError instanceof APIError ? lastError.message : 'Failed to load repository data');
+      setError(lastError instanceof APIError ? lastError.message : 'Repository is currently unavailable');
       setHasLoaded(true); // Mark as loaded even on error to prevent retries
     };
 
@@ -145,7 +151,9 @@ export function ProjectCard({
   };
 
   const handleCardClick = () => {
-    if (repository) {
+    if (onClick) {
+      onClick();
+    } else if (repository) {
       // Extract the username and repo name from the public repo URL
       const urlMatch = publicRepoUrl.match(/github\.com\/([^\/]+)\/([^\/\s]+)/);
       if (urlMatch && urlMatch[1] && urlMatch[2]) {
@@ -155,17 +163,30 @@ export function ProjectCard({
     }
   };
 
-  if (error) {
+  if (error || repository?.status === 'error') {
+    const errorMessage = repository?.metadata?.error || error || 'Repository is currently unavailable';
+    
     return (
       <div ref={cardRef} className={cn("cursor-pointer", className)}>
         <Card className={cn(
           "rounded-[15px] backdrop-blur-md transition-all duration-300",
-          backgroundColor,
-          borderColor,
+          "bg-red-500/5 border-red-500/20",
           cardClassName
         )}>
-          <CardContent className="flex items-center justify-center h-48 text-white/60">
-            {error}
+          <CardContent className="flex flex-col items-center justify-center h-48 gap-2">
+            <AlertCircle className="w-8 h-8 text-red-500" />
+            <div className="text-red-500 text-center">
+              <div className="font-semibold">Repository Error</div>
+              <div className="text-sm opacity-80">{errorMessage}</div>
+              <a 
+                href={publicRepoUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm mt-2 text-red-500/80 hover:text-red-500 underline"
+              >
+                View on GitHub
+              </a>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -233,11 +254,11 @@ export function ProjectCard({
           <div className={cn("grid grid-cols-2 gap-4", statsClassName)}>
             <div className={cn("flex items-center gap-2", secondaryTextColor)}>
               <Star className={`w-${iconSize} h-${iconSize}`} />
-              <span>{repository.stargazers_count} stars</span>
+              <span>{repository.stargazers_count.toLocaleString()} stars</span>
             </div>
             <div className={cn("flex items-center gap-2", secondaryTextColor)}>
               <GitFork className={`w-${iconSize} h-${iconSize}`} />
-              <span>{repository.forks_count} forks</span>
+              <span>{repository.forks_count.toLocaleString()} forks</span>
             </div>
             <div className={cn("flex items-center gap-2", secondaryTextColor)}>
               <Scale className={`w-${iconSize} h-${iconSize}`} />
@@ -245,7 +266,7 @@ export function ProjectCard({
             </div>
             <div className={cn("flex items-center gap-2", secondaryTextColor)}>
               <GitCommit className={`w-${iconSize} h-${iconSize}`} />
-              <span>{repository.commit_count || 0} commits</span>
+              <span>{repository.commit_count?.toLocaleString() || 0} commits</span>
             </div>
           </div>
 

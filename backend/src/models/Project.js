@@ -1,5 +1,9 @@
 const mongoose = require('mongoose');
-const fetch = require('node-fetch');
+const { Octokit } = require('octokit');
+
+const octokit = new Octokit({
+  auth: process.env.GITHUB_TOKEN
+});
 
 /**
  * Project Schema
@@ -44,7 +48,8 @@ const projectSchema = new mongoose.Schema({
     forks: Number,
     lastCommit: Date,
     language: String,
-    topics: [String]
+    topics: [String],
+    error: String
   }
 }, {
   timestamps: true,
@@ -68,21 +73,44 @@ projectSchema.methods.shouldUpdateMetadata = function() {
 
 /**
  * Pre-save middleware
- * Validates repository URL before saving
+ * Validates repository URL before saving using GitHub API
  */
 projectSchema.pre('save', async function(next) {
   if (this.isNew || this.isModified('repositoryUrl')) {
     try {
-      const response = await fetch(this.repositoryUrl, {
-        method: 'HEAD',
-        headers: { 'User-Agent': 'BeLLa-App' }
-      });
-      
-      if (!response.ok) {
+      // Extract owner and repo from URL
+      const match = this.repositoryUrl.match(/github\.com\/([^\/]+)\/([^\/\s]+)/);
+      if (!match) {
         this.status = 'error';
+        this.metadata = { ...this.metadata, error: 'Invalid GitHub repository URL format' };
+        return next();
       }
+
+      const [_, owner, repo] = match;
+      
+      // Use GitHub API to validate repository
+      const { data } = await octokit.rest.repos.get({
+        owner,
+        repo: repo.replace('.git', '')
+      });
+
+      // Update metadata
+      this.metadata = {
+        stars: data.stargazers_count,
+        forks: data.forks_count,
+        lastCommit: data.pushed_at,
+        language: data.language,
+        topics: data.topics || []
+      };
+      this.status = 'active';
+
     } catch (error) {
+      console.error('Error validating repository:', error);
       this.status = 'error';
+      this.metadata = { 
+        ...this.metadata, 
+        error: error.status === 404 ? 'Repository not found' : 'Failed to validate repository'
+      };
     }
   }
   next();

@@ -7,6 +7,8 @@ import { HelpPage } from "./components/pages/HelpPage"
 import LicensePage from "./components/pages/LicensePage"
 import { ProjectsPage } from "./components/pages/ProjectsPage"
 import { ProjectShowcasePage } from './components/pages/ProjectShowcase'
+import { BeLLaMainShowcasePage } from './components/pages/BeLLaMainShowcase'
+import { BeLLaNERTShowcasePage } from './components/pages/BeLLaNERTShowcase'
 import { ComponentsShowcase } from './components/pages/ComponentsShowcase'
 import { ProfilePage } from './components/pages/ProfilePage'
 import { AuthProvider } from './contexts/AuthContext'
@@ -24,6 +26,8 @@ function App() {
             <Route path="license" element={<LicensePage />} />
             <Route path="help" element={<HelpPage />} />
             <Route path="projects" element={<ProjectsPage />} />
+            <Route path="projects/bella/main" element={<BeLLaMainShowcasePage />} />
+            <Route path="projects/bella/nert" element={<BeLLaNERTShowcasePage />} />
             <Route path="projects/:owner/:repoName" element={<ProjectShowcasePage />} />
             <Route path="components" element={<ComponentsShowcase />} />
             <Route path="profile" element={<ProfilePage />} />
