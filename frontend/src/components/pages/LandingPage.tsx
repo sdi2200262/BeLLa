@@ -2,6 +2,7 @@ import { Button } from "../ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../ui/card";
 import { useEffect, useState } from "react";
 import { fetchContributors, type Contributor } from "@/services/contributorsService";
+import { Loader2 } from "lucide-react";
 
 export function LandingPage() {
   const [contributors, setContributors] = useState<Contributor[]>([]);
@@ -9,9 +10,14 @@ export function LandingPage() {
 
   useEffect(() => {
     const loadContributors = async () => {
-      const data = await fetchContributors();
-      setContributors(data);
-      setIsLoading(false);
+      try {
+        const data = await fetchContributors();
+        setContributors(data);
+      } catch (error) {
+        console.error('Error loading contributors:', error);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     loadContributors();
@@ -181,34 +187,37 @@ export function LandingPage() {
 
       <div id="github-contributors-section" className="Github-contributors-section">
         <div className="content-center">
-          <h2 className="text-5xl font-bold text-white">Github Contributors</h2>
+          <h2 className="text-5xl font-bold text-white">BeLLa Contributors</h2>
           <img src="/svg/general/Git-Pull-Request.svg" alt="Github Contributors" className="github-contributors-image size-14" />
           <div className="w-[300px] h-[1px] bg-white/10"></div>
+          <p className="text-white/60 text-center mt-4">
+            Total contributions across all BeLLa projects
+          </p>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 mt-8">
             {isLoading ? (
               <div className="col-span-full flex justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
+                <Loader2 className="w-12 h-12 animate-spin text-white/40" />
               </div>
             ) : contributors.length > 0 ? (
               contributors.map((contributor) => (
                 <a
-                  key={contributor.login}
-                  href={contributor.html_url}
+                  key={contributor.username}
+                  href={`https://github.com/${contributor.username}`}
                   className="group flex flex-col items-center gap-2 transition-all duration-300 hover:scale-105"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
                   <img
-                    src={contributor.avatar_url}
-                    alt={`${contributor.login}'s avatar`}
+                    src={contributor.avatar}
+                    alt={`${contributor.username}'s avatar`}
                     className="size-20 rounded-full ring-2 ring-white/10 group-hover:ring-white/30 transition-all duration-300"
                   />
                   <span className="text-white/70 text-sm group-hover:text-white transition-colors duration-300">
-                    {contributor.login}
+                    {contributor.username}
                   </span>
                   <span className="text-white/50 text-xs">
-                    {contributor.contributions} contributions
+                    {contributor.contributions} total contributions
                   </span>
                 </a>
               ))
@@ -220,9 +229,9 @@ export function LandingPage() {
           </div>
 
           <div className="flex gap-2 mt-40 text-white/80 text-center">
-            <p className="text-lg">You can join Github Contributors by contributing</p>
+            <p className="text-lg">You can join BeLLa Contributors by contributing</p>
             <a href="/projects" className="text-lg font-bold hover:scale-105 transition-all">
-              to a project.
+              to any BeLLa project.
             </a>
           </div>
         </div>

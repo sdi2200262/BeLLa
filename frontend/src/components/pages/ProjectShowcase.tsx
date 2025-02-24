@@ -30,6 +30,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "../ui/breadcrumb";
+import { API_BASE_URL, defaultFetchOptions, handleResponse } from "@/config/api";
 
 interface Repository {
   name: string;
@@ -70,6 +71,18 @@ interface FileNode {
   content?: string;
 }
 
+interface ProjectResponse {
+  data: Repository;
+  cached: boolean;
+  cacheExpiry?: number;
+}
+
+interface FileTreeResponse {
+  data: any;
+  cached: boolean;
+  cacheExpiry?: number;
+}
+
 export function ProjectShowcasePage() {
   const { owner, repoName } = useParams();
   const [repository, setRepository] = useState<Repository | null>(null);
@@ -98,28 +111,37 @@ export function ProjectShowcasePage() {
         const repoUrl = `https://github.com/${owner}/${repoName}`;
         console.log('Fetching repository data for:', repoUrl);
         
-        const repoResponse = await fetch(`http://localhost:3001/api/projects/repo?url=${encodeURIComponent(repoUrl)}`);
+        const repoResponse = await fetch(
+          `${API_BASE_URL}/projects/data?url=${encodeURIComponent(repoUrl)}`,
+          {
+            ...defaultFetchOptions,
+            signal: AbortSignal.timeout(60000) // 60 second timeout
+          }
+        );
         
-        if (!repoResponse.ok) {
-          const errorData = await repoResponse.json();
-          throw new Error(errorData.error || 'Failed to fetch repository data');
-        }
-        
-        const data = await repoResponse.json();
+        const data = await handleResponse<ProjectResponse>(repoResponse);
         console.log('Repository data received:', data);
-        setRepository(data);
+        setRepository(data.data);
         setError(null);
 
         // Fetch file tree data
-        const treeResponse = await fetch(`http://localhost:3001/api/projects/files?url=${encodeURIComponent(repoUrl)}`);
-        if (!treeResponse.ok) {
-          throw new Error('Failed to fetch file tree');
-        }
-        const treeData = await treeResponse.json();
-        setRepository(prev => ({ ...prev!, fileTree: treeData }));
+        const treeResponse = await fetch(
+          `${API_BASE_URL}/projects/tree?url=${encodeURIComponent(repoUrl)}`,
+          {
+            ...defaultFetchOptions,
+            signal: AbortSignal.timeout(60000) // 60 second timeout
+          }
+        );
+        
+        const treeData = await handleResponse<FileTreeResponse>(treeResponse);
+        setRepository(prev => ({ ...prev!, fileTree: treeData.data }));
       } catch (error: any) {
         console.error('Error fetching repository:', error);
-        setError(error.message || 'Failed to load project data');
+        if (error instanceof DOMException && error.name === 'TimeoutError') {
+          setError('Request timed out. Please try again.');
+        } else {
+          setError(error.message || 'Failed to load project data');
+        }
         setRepository(null);
       }
     };
@@ -134,16 +156,13 @@ export function ProjectShowcasePage() {
       try {
         const repoUrl = `https://github.com/${owner}/${repoName}`;
         const response = await fetch(
-          `http://localhost:3001/api/projects/content?url=${encodeURIComponent(repoUrl)}&path=${encodeURIComponent(selectedFile)}`
+          `${API_BASE_URL}/projects/content?url=${encodeURIComponent(repoUrl)}&path=${encodeURIComponent(selectedFile)}`,
+          defaultFetchOptions
         );
         
-        if (!response.ok) {
-          throw new Error('Failed to fetch file content');
-        }
-        
-        const data = await response.json();
+        const data = await handleResponse<{ content: string }>(response);
         setFileContent(data.content);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching file content:', error);
         setFileContent('Failed to load file content');
       }

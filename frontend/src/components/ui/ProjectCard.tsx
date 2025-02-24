@@ -1,24 +1,33 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Star, GitFork, Scale, GitCommit, FileCode } from "lucide-react";
+import { Star, GitFork, Scale, GitCommit, FileCode, GithubIcon } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "./card";
 import { LanguageBar } from "./LanguageBar";
 import { cn } from "@/lib/utils";
 import { getLanguageColor } from "@/lib/colors";
+import { API_BASE_URL, defaultFetchOptions, handleResponse, APIError } from "@/config/api";
 
 interface Repository {
   name: string;
   description: string;
   owner: {
     login: string;
+    avatar_url: string;
   };
   stargazers_count: number;
   forks_count: number;
   license: {
     name: string;
   } | null;
-  languages_url: string;
+  languages: Record<string, number>;
   html_url: string;
+  commit_count?: number;
+}
+
+interface ProjectResponse {
+  cached: boolean;
+  cacheExpiry?: number;
+  data: Repository;
 }
 
 interface ProjectCardProps {
@@ -54,8 +63,7 @@ export function ProjectCard({
 }: ProjectCardProps) {
   const navigate = useNavigate();
   const [repository, setRepository] = useState<Repository | null>(null);
-  const [languages, setLanguages] = useState<{ [key: string]: number }>({});
-  const [commitCount, setCommitCount] = useState<number>(0);
+  const [error, setError] = useState<string | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
@@ -64,7 +72,6 @@ export function ProjectCard({
     const observer = new IntersectionObserver(
       ([entry]) => {
         const newIsVisible = entry.isIntersecting;
-        console.log(`Card visibility changed for ${publicRepoUrl}: ${newIsVisible}`);
         setIsVisible(newIsVisible);
       },
       {
@@ -83,37 +90,54 @@ export function ProjectCard({
 
   useEffect(() => {
     const fetchRepoData = async () => {
-      if (!isVisible || hasLoaded) {
-        console.log(`Skipping fetch for ${publicRepoUrl}: visible=${isVisible}, loaded=${hasLoaded}`);
-        return;
+      if (!isVisible || hasLoaded) return;
+
+      let retries = 3;
+      let lastError = null;
+
+      while (retries > 0) {
+        try {
+          const response = await fetch(
+            `${API_BASE_URL}/projects/data?url=${encodeURIComponent(publicRepoUrl)}`,
+            {
+              ...defaultFetchOptions,
+              signal: AbortSignal.timeout(30000) // 30 second timeout
+            }
+          );
+
+          const data = await handleResponse<ProjectResponse>(response);
+          setRepository(data.data);
+          setHasLoaded(true);
+          setError(null);
+          return; // Success, exit the retry loop
+        } catch (error: any) {
+          console.error(`Error fetching repository data (attempt ${4 - retries}/3):`, error);
+          lastError = error;
+          retries--;
+          
+          if (retries > 0) {
+            // Wait before retrying (exponential backoff)
+            await new Promise(resolve => setTimeout(resolve, Math.pow(2, 3 - retries) * 1000));
+          }
+        }
       }
 
-      console.log(`Fetching data for ${publicRepoUrl}`);
-      try {
-        const response = await fetch(`http://localhost:3001/api/projects/repo?url=${encodeURIComponent(publicRepoUrl)}`);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        setRepository(data);
-        setLanguages(data.languages || {});
-        setCommitCount(data.commitCount || 0);
-        setHasLoaded(true);
-        console.log(`Successfully loaded data for ${publicRepoUrl}`);
-      } catch (error) {
-        console.error('Error fetching repository data:', error);
-        setRepository(null);
-      }
+      // If we get here, all retries failed
+      setRepository(null);
+      setError(lastError instanceof APIError ? lastError.message : 'Failed to load repository data');
+      setHasLoaded(true); // Mark as loaded even on error to prevent retries
     };
 
     fetchRepoData();
   }, [publicRepoUrl, isVisible, hasLoaded]);
 
   const calculateLanguagePercentages = () => {
-    const total = Object.values(languages).reduce((a, b) => a + b, 0);
+    if (!repository?.languages) return [];
+    
+    const total = Object.values(repository.languages).reduce((a, b) => a + b, 0);
     if (total === 0) return [];
     
-    return Object.entries(languages).map(([name, value]) => ({
+    return Object.entries(repository.languages).map(([name, value]) => ({
       name,
       percentage: (value / total) * 100,
       color: getLanguageColor(name)
@@ -131,19 +155,44 @@ export function ProjectCard({
     }
   };
 
+  if (error) {
+    return (
+      <div ref={cardRef} className={cn("cursor-pointer", className)}>
+        <Card className={cn(
+          "rounded-[15px] backdrop-blur-md transition-all duration-300",
+          backgroundColor,
+          borderColor,
+          cardClassName
+        )}>
+          <CardContent className="flex items-center justify-center h-48 text-white/60">
+            {error}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (!repository) {
     return (
       <div ref={cardRef} className={cn("cursor-pointer", className)}>
-        <Card className={cn("rounded-[15px] backdrop-blur-md transition-all duration-300 p-4", backgroundColor, borderColor, hoverScale, cardClassName)}>
+        <Card className={cn("rounded-[15px] backdrop-blur-md transition-all duration-700", backgroundColor, borderColor, hoverScale, cardClassName)}>
           <CardHeader>
-            <CardTitle className={cn("text-2xl", textColor, titleClassName)}>
-              Loading…
-            </CardTitle>
+            <div className="flex items-center justify-between gap-3">
+              <div className="space-y-2 flex-1">
+                <div className="h-6 w-3/4 bg-white/5 rounded animate-pulse" />
+                <div className="h-4 w-1/3 bg-white/5 rounded animate-pulse" />
+              </div>
+              <div className="w-8 h-8 rounded-full bg-white/5 animate-pulse flex-shrink-0" />
+            </div>
+            <div className="h-16 bg-white/5 rounded animate-pulse mt-3" />
           </CardHeader>
-          <CardContent>
-            <CardDescription className={cn(secondaryTextColor, descriptionClassName)}>
-              Fetching repository data…
-            </CardDescription>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              {Array(4).fill(null).map((_, i) => (
+                <div key={i} className="h-6 bg-white/5 rounded animate-pulse" />
+              ))}
+            </div>
+            <div className="h-8 bg-white/5 rounded animate-pulse" />
           </CardContent>
         </Card>
       </div>
@@ -159,14 +208,21 @@ export function ProjectCard({
         hoverScale,
         cardClassName
       )}>
-        <CardHeader className="space-y-2">
-          <div className="space-y-1">
-            <CardTitle className={cn("text-2xl", textColor, titleClassName)}>
-              {repository.name}
-            </CardTitle>
-            <div className={cn("text-sm", secondaryTextColor)}>
-              by {repository.owner?.login || "Unknown owner"}
+        <CardHeader className="space-y-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-1">
+              <CardTitle className={cn("text-2xl", textColor, titleClassName)}>
+                {repository.name}
+              </CardTitle>
+              <div className={cn("text-sm", secondaryTextColor)}>
+                by {repository.owner?.login || "Unknown owner"}
+              </div>
             </div>
+            <img
+              src={repository.owner?.avatar_url}
+              alt={`${repository.owner?.login}'s avatar`}
+              className="w-8 h-8 rounded-full ring-1 ring-white/10 transition-all duration-300 hover:ring-[#0066FF] flex-shrink-0"
+            />
           </div>
           <CardDescription className={cn(secondaryTextColor, descriptionClassName)}>
             {repository.description || "No description available"}
@@ -189,11 +245,11 @@ export function ProjectCard({
             </div>
             <div className={cn("flex items-center gap-2", secondaryTextColor)}>
               <GitCommit className={`w-${iconSize} h-${iconSize}`} />
-              <span>{commitCount} commits</span>
+              <span>{repository.commit_count || 0} commits</span>
             </div>
           </div>
 
-          {Object.keys(languages).length > 0 && (
+          {repository.languages && Object.keys(repository.languages).length > 0 && (
             <div className={cn("pt-2 border-t", borderColor)}>
               <div className={cn("flex items-center gap-2 text-sm mb-2", secondaryTextColor)}>
                 <FileCode className="w-3 h-3" />

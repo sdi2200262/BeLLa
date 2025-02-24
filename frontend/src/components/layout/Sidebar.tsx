@@ -3,40 +3,53 @@ import { Button } from '../ui/button'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext';
 
+interface GitHubRepo {
+  id: number;
+  name: string;
+  full_name: string;
+  html_url: string;
+  description?: string;
+  visibility: string;
+  owner: {
+    avatar_url: string;
+  };
+}
+
+interface User {
+  id: string;
+  username: string;
+  email: string;
+  role: string;
+  repos?: GitHubRepo[];
+}
+
 export function Sidebar({ isOpen }: { isOpen: boolean }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   const handleNavigation = (path: string) => {
-    if (path === '/profile' && !user) {
+    navigate(path);
+  };
+
+  const handleProfileClick = () => {
+    if (!user) {
       navigate('/login');
     } else {
-      navigate(path);
+      navigate('/profile');
     }
   };
 
   const getProfileIcon = () => {
-    if (user?.avatar) {
-      // GitHub user with avatar
+    if (user) {
       return (
         <img 
-          src={user.avatar} 
-          alt="Profile" 
-          className="size-6 mr-4 rounded-full"
-        />
-      );
-    } else if (location.pathname !== '/login') {
-      // Guest user
-      return (
-        <img 
-          src="/svg/general/GuestAvatar.svg" 
-          alt="Guest" 
-          className="size-6 mr-4"
+          src={`https://github.com/${user.username}.png`}
+          alt={user.username}
+          className="size-6 mr-4 rounded-full ring-1 ring-white/10 hover:ring-[#0066FF] transition-all duration-300"
         />
       );
     } else {
-      // Default icon
       return <User2 className="size-6 mr-4" />;
     }
   };
@@ -57,7 +70,7 @@ export function Sidebar({ isOpen }: { isOpen: boolean }) {
           <Button 
             variant="ghost" 
             className="rounded-[15px] p-2 w-full justify-start text-xl text-white hover:text-white hover:bg-white/5 transition-colors duration-100"
-            onClick={() => handleNavigation('/profile')}
+            onClick={handleProfileClick}
           >
             {getProfileIcon()}
             Profile
@@ -91,7 +104,6 @@ export function Sidebar({ isOpen }: { isOpen: boolean }) {
             <img src="/svg/general/License.svg" alt="License" className="size-6 mr-2" />
             License
           </Button>
-
 
           <div className="w-full h-[1px] bg-white/10 my-4"></div>
 

@@ -10,7 +10,7 @@ import { ProjectShowcasePage } from './components/pages/ProjectShowcase'
 import { ComponentsShowcase } from './components/pages/ComponentsShowcase'
 import { ProfilePage } from './components/pages/ProfilePage'
 import { AuthProvider } from './contexts/AuthContext'
-import { GithubLogin } from './components/GithubLogin'
+import LoginPage from './components/pages/LoginPage'
 
 function App() {
   return (
@@ -19,7 +19,7 @@ function App() {
         <Routes>
           <Route path="/" element={<MainLayout />}>
             <Route index element={<LandingPage />} />
-            <Route path="login" element={<GithubLogin />} />
+            <Route path="login" element={<LoginPage />} />
             <Route path="documentation" element={<Documentation />} />
             <Route path="license" element={<LicensePage />} />
             <Route path="help" element={<HelpPage />} />

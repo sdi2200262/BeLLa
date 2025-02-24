@@ -1,202 +1,278 @@
 const axios = require('axios');
+const NodeCache = require('node-cache');
+const PQueue = require('p-queue').default;
 
+/**
+ * Configuration
+ */
+const CONFIG = {
+  CACHE: {
+    TTL: 1800,          // 30 minutes
+    CLEANUP: 300,       // 5 minutes
+    MAX_SIZE: 500000,   // 500KB max response size
+    MAX_KEYS: 1000      // Maximum cached responses
+  },
+  RATE_LIMIT: {
+    WARNING: 4000,      // Warn at 4000 requests (80% of limit)
+    RESET: 3600000,     // Reset counter every hour
+    MIN_REMAINING: 100  // Minimum remaining calls before throttling
+  },
+  QUEUE: {
+    CONCURRENCY: 2,     // Process 2 requests at a time
+    TIMEOUT: 30000,     // 30 second timeout per request
+    RETRY: 3           // Retry failed requests 3 times
+  }
+};
+
+/**
+ * GitHub API Service
+ * Optimized for free tier with advanced rate limiting
+ */
 class GitHubService {
   constructor() {
-    this.client = axios.create({
-      baseURL: 'https://api.github.com',
-      headers: {
-        Authorization: `token ${process.env.GITHUB_TOKEN}`,
-        Accept: 'application/vnd.github.v3+json'
+    // Initialize caching
+    this.cache = new NodeCache({ 
+      stdTTL: CONFIG.CACHE.TTL,
+      checkperiod: CONFIG.CACHE.CLEANUP,
+      maxKeys: CONFIG.CACHE.MAX_KEYS,
+      useClones: false
+    });
+
+    // Initialize request queue
+    this.queue = new PQueue({ 
+      concurrency: CONFIG.QUEUE.CONCURRENCY,
+      timeout: CONFIG.QUEUE.TIMEOUT
+    });
+
+    // Rate limit tracking
+    this.apiCalls = 0;
+    this.lastReset = Date.now();
+    this.rateLimitRemaining = 5000; // GitHub's default limit
+
+    // Reset counter hourly
+    setInterval(() => {
+      this.apiCalls = 0;
+      this.lastReset = Date.now();
+    }, CONFIG.RATE_LIMIT.RESET);
+
+    // Periodic cache cleanup
+    setInterval(() => {
+      const keys = this.cache.keys();
+      keys.forEach(key => {
+        const value = this.cache.get(key);
+        if (value) {
+          const size = Buffer.byteLength(JSON.stringify(value));
+          if (size > CONFIG.CACHE.MAX_SIZE) {
+            console.warn(`Removing oversized cache entry: ${key} (${size} bytes)`);
+            this.cache.del(key);
+          }
+        }
+      });
+    }, CONFIG.CACHE.CLEANUP * 1000);
+  }
+
+  /**
+   * Core API request method with retries and rate limiting
+   */
+  async makeRequest(endpoint, options = {}) {
+    const cacheKey = `github:${endpoint}${JSON.stringify(options)}`;
+    const cached = this.cache.get(cacheKey);
+    if (cached) return cached;
+
+    // Check rate limits
+    if (this.rateLimitRemaining < CONFIG.RATE_LIMIT.MIN_REMAINING) {
+      console.warn(`GitHub API rate limit low: ${this.rateLimitRemaining} remaining`);
+      throw new Error('Rate limit approaching, request queued');
+    }
+
+    let retries = 0;
+    while (retries < CONFIG.QUEUE.RETRY) {
+      try {
+        const response = await axios({
+          url: `https://api.github.com${endpoint}`,
+          headers: {
+            'Authorization': `Bearer ${process.env.GITHUB_TOKEN}`,
+            'Accept': 'application/vnd.github.v3+json'
+          },
+          ...options
+        });
+
+        // Update rate limit info
+        this.rateLimitRemaining = parseInt(response.headers['x-ratelimit-remaining'] || this.rateLimitRemaining);
+        this.apiCalls++;
+
+        // Cache successful responses if not too large
+        if (response.status === 200) {
+          const dataSize = Buffer.byteLength(JSON.stringify(response.data));
+          if (dataSize < CONFIG.CACHE.MAX_SIZE) {
+            this.cache.set(cacheKey, response.data);
+          }
+        }
+
+        return response.data;
+      } catch (error) {
+        retries++;
+        
+        // Handle rate limiting
+        if (error.response?.status === 403) {
+          this.rateLimitRemaining = 0;
+          console.error('GitHub API rate limit exceeded');
+          throw new Error('Rate limit exceeded');
+        }
+
+        // Retry on 5xx errors or network issues
+        if (retries < CONFIG.QUEUE.RETRY && 
+            (error.response?.status >= 500 || !error.response)) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * retries));
+          continue;
+        }
+
+        throw new Error(error.response?.data?.message || 'GitHub API request failed');
       }
+    }
+  }
+
+  /**
+   * Queue non-urgent requests with priority
+   */
+  queueRequest(endpoint, options = {}, priority = 0) {
+    return new Promise((resolve, reject) => {
+      const request = async () => {
+        try {
+          const result = await this.makeRequest(endpoint, options);
+          resolve(result);
+        } catch (error) {
+          if (error.message.includes('Rate limit')) {
+            // Requeue with lower priority if rate limited
+            this.queueRequest(endpoint, options, priority - 1)
+              .then(resolve)
+              .catch(reject);
+          } else {
+            reject(error);
+          }
+        }
+      };
+
+      this.queue.add(request);
+      // Sort queue by priority
+      this.queue.sort((a, b) => (b.priority || 0) - (a.priority || 0));
     });
   }
 
-  parseGithubRepoUrl(url) {
+  /**
+   * Parse and validate GitHub repository URL
+   */
+  parseRepoUrl(url) {
     try {
-      // Clean the URL first and remove query parameters
       const cleanUrl = url.trim().split('?')[0].replace(/\/$/, '');
-      
-      // Check if it's an organization URL (has no repository part)
-      const orgMatch = cleanUrl.match(/^https?:\/\/(?:www\.)?github\.com\/([^\/]+)\/?$/);
-      if (orgMatch) {
-        throw new Error('Please provide a specific repository URL, not an organization URL. For example: https://github.com/ollama/ollama');
-      }
-
-      // Handle both HTTPS and SSH URLs
-      let match;
-      if (cleanUrl.startsWith('git@')) {
-        // SSH URL format: git@github.com:username/repo.git
-        match = cleanUrl.match(/git@github\.com:([^\/]+)\/([^\.]+)(\.git)?/);
-      } else {
-        // HTTPS URL format: https://github.com/username/repo
-        match = cleanUrl.match(/https?:\/\/(?:www\.)?github\.com\/([^\/]+)\/([^\/\s]+)/);
-      }
+      const match = cleanUrl.match(/https?:\/\/(?:www\.)?github\.com\/([^\/]+)\/([^\/\s]+)/);
 
       if (!match) {
-        throw new Error('Invalid GitHub repository URL. Please provide a URL in the format: https://github.com/username/repository');
+        throw new Error('Invalid GitHub URL. Format: https://github.com/owner/repo');
       }
 
-      const [, username, repoName] = match;
-      // Don't modify the repository name, just remove .git if present
       return {
-        username,
-        repoName: repoName.replace(/\.git$/, '')
+        owner: match[1],
+        repo: match[2].replace(/\.git$/, '')
       };
     } catch (error) {
-      console.error('URL parsing error:', error);
-      throw error; // Propagate the detailed error message
+      throw new Error('Invalid GitHub repository URL');
     }
   }
 
-  async getRepositoryData(url) {
-    console.log('Fetching data for URL:', url);
-    const parsed = this.parseGithubRepoUrl(url);
-    if (!parsed) {
-      throw new Error('Invalid GitHub repository URL');
-    }
+  /**
+   * Public API Methods
+   */
+  async getRepository(owner, repo) {
+    return this.makeRequest(`/repos/${owner}/${repo}`);
+  }
 
-    const { username, repoName } = parsed;
-    console.log('Parsed repository details:', { username, repoName });
+  async getRepositoryData(url) {
+    const { owner, repo } = this.parseRepoUrl(url);
     
     try {
-      // First verify the repository exists and is accessible
-      const repoResponse = await this.client.get(`/repos/${username}/${repoName}`);
-      if (!repoResponse.data) {
-        throw new Error('Repository not found');
-      }
-
-      // Then fetch languages
-      const languagesResponse = await this.client.get(`/repos/${username}/${repoName}/languages`);
-
-      // Get commit count
-      const commitsResponse = await this.client.get(
-        `/repos/${username}/${repoName}/commits`,
-        { 
-          params: { 
-            per_page: 1,
-            sha: repoResponse.data.default_branch
-          }
-        }
-      );
-
-      // Extract commit count from the Link header
-      let commitCount = 0;
-      const linkHeader = commitsResponse.headers['link'];
-      if (linkHeader) {
-        const matches = linkHeader.match(/page=(\d+)>; rel="last"/);
-        commitCount = matches ? parseInt(matches[1]) : 0;
-      }
+      const [repoData, languages] = await Promise.all([
+        this.makeRequest(`/repos/${owner}/${repo}`),
+        this.makeRequest(`/repos/${owner}/${repo}/languages`)
+      ]);
 
       return {
-        ...repoResponse.data,
-        languages: languagesResponse.data,
-        commitCount
+        ...repoData,
+        languages
       };
     } catch (error) {
-      console.error('GitHub API Error:', {
-        message: error.response?.data?.message || error.message,
-        status: error.response?.status,
-        url: error.config?.url,
-        // Don't log headers to avoid exposing tokens
-        error: error.toString()
-      });
-      throw new Error(error.response?.data?.message || 'Failed to fetch repository data');
+      throw new Error('Failed to fetch repository data');
     }
   }
 
   async getFileTree(url) {
+    const { owner, repo } = this.parseRepoUrl(url);
+    
     try {
-      const { username, repoName } = this.parseGithubRepoUrl(url);
-      
-      // First get the default branch
-      const repoResponse = await this.client.get(`/repos/${username}/${repoName}`);
-      const defaultBranch = repoResponse.data.default_branch;
-
-      // Get the tree with recursive option to get all files
-      const treeResponse = await this.client.get(
-        `/repos/${username}/${repoName}/git/trees/${defaultBranch}`,
+      const repoData = await this.makeRequest(`/repos/${owner}/${repo}`);
+      const tree = await this.makeRequest(
+        `/repos/${owner}/${repo}/git/trees/${repoData.default_branch}`,
         { params: { recursive: 1 } }
       );
 
-      // Transform the flat tree into a hierarchical structure
-      const root = { 
-        id: 'root', 
-        name: repoName, 
-        type: 'tree',
-        children: [] 
-      };
-      const map = { '': root };
-
-      treeResponse.data.tree.forEach(item => {
-        if (item.type !== 'blob' && item.type !== 'tree') return;
-
-        const parts = item.path.split('/');
-        let currentPath = '';
-
-        parts.forEach((part, index) => {
-          const parentPath = currentPath;
-          currentPath = currentPath ? `${currentPath}/${part}` : part;
-
-          if (!map[currentPath]) {
-            const node = {
-              id: currentPath,
-              name: part,
-              type: item.type,
-              path: currentPath,
-              children: [],
-            };
-
-            map[currentPath] = node;
-            if (map[parentPath]) {
-              map[parentPath].children.push(node);
-            }
-          }
-        });
-      });
-
-      // Sort the tree: directories first, then files, both alphabetically
-      const sortTree = (node) => {
-        if (node.children) {
-          node.children.sort((a, b) => {
-            if (a.type === b.type) {
-              return a.name.localeCompare(b.name);
-            }
-            return a.type === 'tree' ? -1 : 1;
-          });
-          node.children.forEach(sortTree);
-        }
-      };
-
-      sortTree(root);
-      return root;
+      return this.processFileTree(tree.tree, repo);
     } catch (error) {
-      console.error('Error fetching file tree:', error);
-      throw new Error('Failed to fetch repository file tree');
+      throw new Error('Failed to fetch repository structure');
     }
   }
 
-  async getFileContent(url, path) {
-    try {
-      const { username, repoName } = this.parseGithubRepoUrl(url);
-      
-      // First get the default branch
-      const repoResponse = await this.client.get(`/repos/${username}/${repoName}`);
-      const defaultBranch = repoResponse.data.default_branch;
+  /**
+   * Helper method to process file tree
+   */
+  processFileTree(items, rootName) {
+    const root = { 
+      name: rootName, 
+      type: 'tree',
+      children: [] 
+    };
 
-      // Get the file content
-      const contentResponse = await this.client.get(
-        `/repos/${username}/${repoName}/contents/${path}`,
-        { params: { ref: defaultBranch } }
-      );
+    const paths = {};
+    paths[''] = root;
 
-      // GitHub returns base64 encoded content
-      const content = Buffer.from(contentResponse.data.content, 'base64').toString();
-      return { content };
-    } catch (error) {
-      console.error('Error fetching file content:', error);
-      throw new Error('Failed to fetch file content');
-    }
+    items.forEach(item => {
+      if (!['blob', 'tree'].includes(item.type)) return;
+
+      const parts = item.path.split('/');
+      let currentPath = '';
+
+      parts.forEach((part, i) => {
+        const parentPath = currentPath;
+        currentPath = currentPath ? `${currentPath}/${part}` : part;
+
+        if (!paths[currentPath]) {
+          const node = {
+            name: part,
+            type: i === parts.length - 1 ? item.type : 'tree',
+            path: currentPath,
+            children: []
+          };
+
+          paths[currentPath] = node;
+          paths[parentPath].children.push(node);
+        }
+      });
+    });
+
+    // Sort: directories first, then files
+    const sortNode = (node) => {
+      if (node.children) {
+        node.children.sort((a, b) => {
+          if (a.type === b.type) return a.name.localeCompare(b.name);
+          return a.type === 'tree' ? -1 : 1;
+        });
+        node.children.forEach(sortNode);
+      }
+    };
+
+    sortNode(root);
+    return root;
   }
 }
 
+// Export singleton instance
 module.exports = new GitHubService(); 

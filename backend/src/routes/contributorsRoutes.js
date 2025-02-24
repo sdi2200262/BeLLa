@@ -1,7 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { getUniqueContributors } = require('../controllers/contributorsController');
+const contributorsController = require('../controllers/contributorsController');
 
-router.get('/', getUniqueContributors);
+/**
+ * Contributors Routes
+ */
+router.get('/', contributorsController.getContributors);
 
 module.exports = router; 

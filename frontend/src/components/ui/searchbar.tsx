@@ -20,6 +20,9 @@ interface SearchBarProps extends Omit<React.InputHTMLAttributes<HTMLInputElement
   size?: "default" | "sm" | "lg"
   variant?: "default" | "ghost" | "outline"
   onChange?: React.ChangeEventHandler<HTMLInputElement>
+  hideSearchIcon?: boolean
+  showSuggestionsOnFocus?: boolean
+  minCharacters?: number
 }
 
 const SearchBar = React.forwardRef<HTMLInputElement, SearchBarProps>(
@@ -35,6 +38,9 @@ const SearchBar = React.forwardRef<HTMLInputElement, SearchBarProps>(
     placeholder,
     value,
     onChange,
+    hideSearchIcon = false,
+    showSuggestionsOnFocus = false,
+    minCharacters = 2,
     ...props
   }, ref) => {
     const [open, setOpen] = React.useState(false)
@@ -102,7 +108,9 @@ const SearchBar = React.forwardRef<HTMLInputElement, SearchBarProps>(
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const value = e.target.value
       setInputValue(value)
-      setOpen(value.length >= 2)
+      if (!showSuggestionsOnFocus) {
+        setOpen(value.length >= minCharacters)
+      }
       onChange?.(e)
     }
 
@@ -115,17 +123,16 @@ const SearchBar = React.forwardRef<HTMLInputElement, SearchBarProps>(
     )
 
     const inputClasses = cn(
-      "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm",
+      "flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm",
       "ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium",
-      "placeholder:text-muted-foreground focus-visible:outline-none",
+      "placeholder:text-muted-foreground",
       "transition-all duration-300 ease-in-out",
-      "pl-10",
-      "focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-ring",
-      "group-hover:border-ring/50",
+      !hideSearchIcon && "pl-10",
+      "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+      "shadow-sm",
       variant === "ghost" && "border-none shadow-none hover:bg-accent/50",
       variant === "outline" && [
-        "border-2",
-        "shadow-sm",
+        "border",
         "hover:shadow-md",
         "transition-shadow"
       ],
@@ -135,17 +142,19 @@ const SearchBar = React.forwardRef<HTMLInputElement, SearchBarProps>(
       inputClassName
     )
 
+    const searchIconClasses = cn(
+      "absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none",
+      "transition-all duration-200",
+      "group-focus-within:text-foreground group-hover:scale-105",
+      size === "sm" && "h-3 w-3",
+      size === "default" && "h-4 w-4",
+      size === "lg" && "h-5 w-5"
+    )
+
     return (
       <div className={containerClasses} ref={commandRef}>
         <div className="relative">
-          <Search className={cn(
-            "absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none",
-            "transition-transform duration-200",
-            "group-focus-within:scale-110 group-hover:scale-105",
-            size === "sm" && "h-3 w-3",
-            size === "default" && "h-4 w-4",
-            size === "lg" && "h-5 w-5"
-          )} />
+          {!hideSearchIcon && <Search className={searchIconClasses} />}
           <input
             {...props}
             ref={ref}
@@ -153,6 +162,11 @@ const SearchBar = React.forwardRef<HTMLInputElement, SearchBarProps>(
             value={inputValue}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
+            onFocus={() => {
+              if (showSuggestionsOnFocus) {
+                setOpen(true)
+              }
+            }}
             placeholder={placeholder}
             className={inputClasses}
           />

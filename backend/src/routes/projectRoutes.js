@@ -1,24 +1,29 @@
 const express = require('express');
 const router = express.Router();
+const auth = require('../middleware/auth');
 const projectController = require('../controllers/projectController');
-const { githubApiLimiter, cacheMiddleware } = require('../middleware/rateLimiter');
 
-// Get all projects (cache for 1 minute)
-router.get('/', cacheMiddleware(60), projectController.getAllProjects);
+/**
+ * Project Routes
+ * All routes require authentication
+ */
 
-// Get repository data from GitHub (with rate limiting and 5-minute cache)
-router.get('/repo', githubApiLimiter, cacheMiddleware(300), projectController.getProjectData);
+// Get all projects
+router.get('/', projectController.getAllProjects);
 
-// Get repository file tree (with rate limiting and 5-minute cache)
-router.get('/files', githubApiLimiter, cacheMiddleware(300), projectController.getFileTree);
+// Get user's projects
+router.get('/user', auth, projectController.getUserProjects);
 
-// Get file content (with rate limiting and 5-minute cache)
-router.get('/content', githubApiLimiter, cacheMiddleware(300), projectController.getFileContent);
+// Get project data
+router.get('/data', projectController.getProjectData);
 
-// Add a new project (with rate limiting)
-router.post('/', githubApiLimiter, projectController.addProject);
+// Get file tree
+router.get('/tree', projectController.getFileTree);
 
-// Delete a project
-router.delete('/:id', projectController.deleteProject);
+// Add project (auth required)
+router.post('/', auth, projectController.addProject);
+
+// Archive project (auth required)
+router.delete('/:id', auth, projectController.deleteProject);
 
 module.exports = router; 
