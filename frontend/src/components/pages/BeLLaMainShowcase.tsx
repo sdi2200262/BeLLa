@@ -14,13 +14,15 @@ import {
   Zap,
   Shield,
   Rocket,
-  Boxes,
+  Check,
+  Lightbulb,
   Database,
   Globe,
   Loader2, 
   MessageCircle,
-  Bot,
-  HeartHandshake
+  GraduationCap,
+  HeartHandshake,
+  Terminal
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
@@ -177,68 +179,15 @@ export function BeLLaMainShowcasePage() {
         <div className="absolute inset-0 bg-gradient-to-br from-[#0066FF]/20 via-purple-500/10 to-transparent" />
         <div className="relative max-w-6xl mx-auto px-6 py-20">
           <div className="flex flex-col items-center text-center space-y-8">
-            <div className="relative group">
-              <img 
-                src="/svg/BeLLa/BeLLa-Monogram.svg"
-                alt="BeLLa"
-                className="size-50 transition-all duration-500 group-hover:scale-110"
-              />
-              <div className="absolute -bottom-4 -right-4 bg-[#0066FF] p-3 rounded-xl">
-                <GithubIcon className="w-6 h-6 text-white" />
-              </div>
-            </div>
-            
             <div className="space-y-4 max-w-3xl">
-              <h1 className="text-5xl font-bold tracking-tight">
-                The Future of Project Management
-              </h1>
               <p className="text-2xl text-white/60">
-                BeLLa revolutionizes how developers showcase, manage, and collaborate on projects.
-                Built for developers, by developers.
+                BeLLa is an open source collaborative development platform.
               </p>
             </div>
 
-            <div className="flex items-center gap-4">
-              <Button
-                size="lg"
-                className="bg-[#0066FF] hover:bg-[#0066FF]/80 text-white px-8"
-                onClick={() => window.open(repository.html_url, '_blank')}
-              >
-                <GithubIcon className="w-5 h-5 mr-2" />
-                View on GitHub
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-white/10 hover:bg-white/5"
-                onClick={() => setActiveTab("about")}
-              >
-                <BookOpen className="w-5 h-5 mr-2" />
-                About
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-4 gap-8 mt-12">
-              <div className="space-y-2 p-4 rounded-xl bg-white/5 backdrop-blur-sm">
-                <Star className="w-6 h-6 text-[#0066FF]" />
-                <div className="text-2xl font-bold">{repository.stargazers_count}</div>
-                <div className="text-sm text-white/60">GitHub Stars</div>
-              </div>
-              <div className="space-y-2 p-4 rounded-xl bg-white/5 backdrop-blur-sm">
-                <GitFork className="w-6 h-6 text-[#0066FF]" />
-                <div className="text-2xl font-bold">{repository.forks_count}</div>
-                <div className="text-sm text-white/60">Forks</div>
-              </div>
-              <div className="space-y-2 p-4 rounded-xl bg-white/5 backdrop-blur-sm">
-                <GitCommit className="w-6 h-6 text-[#0066FF]" />
-                <div className="text-2xl font-bold">{repository.commit_count}</div>
-                <div className="text-sm text-white/60">Commits</div>
-              </div>
-              <div className="space-y-2 p-4 rounded-xl bg-white/5 backdrop-blur-sm">
-                <Users className="w-6 h-6 text-[#0066FF]" />
-                <div className="text-2xl font-bold">{repository.watchers_count}</div>
-                <div className="text-sm text-white/60">Community Members</div>
-              </div>
+            <div className="flex items-center">
+              <img src="/svg/BeLLa/CobuterMan.svg" alt="Man" className="size-26" />
+              
             </div>
           </div>
         </div>
@@ -317,44 +266,6 @@ export function BeLLaMainShowcasePage() {
 
             {/* Core Features Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Smart Commenting System */}
-              <Card className="bg-black/40 border-white/10 col-span-full">
-                <CardHeader>
-                  <div className="flex items-center gap-4">
-                    <div>
-                      <CardTitle className="text-xl text-white">Smart Commenting System</CardTitle>
-                      <CardDescription className="text-white/60 text-md">
-                        Our flagship feature enables seamless collaboration through thread-based discussions and file-specific or code-specific comments.
-                      </CardDescription>
-                    </div>
-                    <div className="bg-[#0066FF]/10 p-3 rounded-xl ml-auto">
-                      <MessageCircle className="w-8 h-8 text-[#0066FF]" />
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                    <div className="bg-white/5 p-4 rounded-lg">
-                      <h4 className="font-semibold text-white mb-2">Thread-Based Discussions</h4>
-                      <p className="text-sm text-white/60">
-                        Collaborate on project issues and features with other developers.
-                      </p>
-                    </div>
-                    <div className="bg-white/5 p-4 rounded-lg">
-                      <h4 className="font-semibold text-white mb-2">Code Context</h4>
-                      <p className="text-sm text-white/60">
-                        Comments are directly linked to relevant files or code sections for clear communication.
-                      </p>
-                    </div>
-                    <div className="bg-white/5 p-4 rounded-lg">
-                      <h4 className="font-semibold text-white mb-2">Smart Notifications</h4>
-                      <p className="text-sm text-white/60">
-                        Get notified when a comment of yours has been replied to or if the Project has been updated.
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
 
               <Card className="bg-black/40 border-white/10">
                 <CardHeader>
@@ -395,7 +306,7 @@ export function BeLLaMainShowcasePage() {
                     <Users className="w-6 h-6 text-[#0066FF]" />
                     <HeartHandshake className="w-6 h-6 text-[#0066FF]" />
                   </div>
-                  <CardTitle className="text-xl text-white">Community Focus</CardTitle>
+                  <CardTitle className="text-xl text-white">Developer Focus</CardTitle>
                   <CardDescription className="text-white/60 text-md">
                     A platform that grows with its community
                   </CardDescription>
@@ -406,7 +317,7 @@ export function BeLLaMainShowcasePage() {
                       <GitPullRequest className="w-5 h-5 text-[#0066FF] mt-3" />
                       <div>
                         <h4 className="font-semibold text-white/80">Portfolio Enhancement</h4>
-                        <p className="text-sm text-white/60">Showcase your contributions and build your developer profile</p>
+                        <p className="text-sm text-white/60">Make contributions to build up your developer profile</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
@@ -420,44 +331,83 @@ export function BeLLaMainShowcasePage() {
                 </CardContent>
               </Card>
             </div>
+              
+              {/* Smart Commenting System */}
+              <Card className="bg-black/40 border-white/10 col-span-full">
+                <CardHeader>
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <CardTitle className="text-xl text-white">Smart Commenting System</CardTitle>
+                      <CardDescription className="text-white/60 text-md">
+                        Our flagship feature enables seamless collaboration through thread-based discussions and file-specific or code-specific comments.
+                      </CardDescription>
+                    </div>
+                    <div className="bg-[#0066FF]/10 p-3 rounded-xl ml-auto">
+                      <MessageCircle className="w-8 h-8 text-[#0066FF]" />
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                    <div className="bg-white/5 p-4 rounded-lg">
+                      <h4 className="font-semibold text-white mb-2">Thread-Based Discussions</h4>
+                      <p className="text-sm text-white/60">
+                        Collaborate on project issues and features with other developers.
+                      </p>
+                    </div>
+                    <div className="bg-white/5 p-4 rounded-lg">
+                      <h4 className="font-semibold text-white mb-2">Code Context</h4>
+                      <p className="text-sm text-white/60">
+                        Comments are directly linked to relevant files or code sections for clear communication.
+                      </p>
+                    </div>
+                    <div className="bg-white/5 p-4 rounded-lg">
+                      <h4 className="font-semibold text-white mb-2">Smart Notifications</h4>
+                      <p className="text-sm text-white/60">
+                        Get notified when a comment of yours has been replied to or if the Project has been updated.
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-            {/* Origin Story */}
-            <Card className="bg-black/40 border-white/10 mt-12">
+            {/* Learning & Growth Section */}
+            <Card className="bg-black/40 border-white/10 col-span-full mt-8">
               <CardHeader>
-                <CardTitle className="text-2xl">The BeLLa Story</CardTitle>
-                <CardDescription>
-                  From Academic Project to Developer Platform
-                </CardDescription>
+                <div className="flex items-center gap-4">
+                  <div>
+                    <CardTitle className="text-xl text-white">Perfect for Learning & Growth</CardTitle>
+                    <CardDescription className="text-white/60 text-md">
+                      An ideal environment for developers to practice and gain real-world experience
+                    </CardDescription>
+                  </div>
+                  <div className="bg-[#0066FF]/10 p-3 rounded-xl ml-auto">
+                    <GraduationCap className="w-8 h-8 text-[#0066FF]" />
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-white/80">
-                  BeLLa started as a side project to address the gap between academic computer science education
-                  and real-world web development. What began as a learning journey has evolved into a platform
-                  that helps developers showcase their work, collaborate effectively, and build their portfolios.
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                   <div className="bg-white/5 p-4 rounded-lg">
-                    <Rocket className="w-6 h-6 text-[#0066FF] mb-2" />
-                    <h4 className="font-semibold mb-2">Learning Platform</h4>
+                    <h4 className="font-semibold text-white mb-2">Hands-on Experience</h4>
                     <p className="text-sm text-white/60">
-                      Perfect for developers looking to gain practical experience
+                      Work with real codebases and gain practical experience in modern development workflows.
                     </p>
                   </div>
                   <div className="bg-white/5 p-4 rounded-lg">
-                    <Users className="w-6 h-6 text-[#0066FF] mb-2" />
-                    <h4 className="font-semibold mb-2">Community Driven</h4>
+                    <h4 className="font-semibold text-white mb-2">Get Feedback</h4>
                     <p className="text-sm text-white/60">
-                      Built and improved by the developer community
+                      Receive guidance and engage with experienced developers through the commenting system.
                     </p>
                   </div>
                   <div className="bg-white/5 p-4 rounded-lg">
-                    <Boxes className="w-6 h-6 text-[#0066FF] mb-2" />
-                    <h4 className="font-semibold mb-2">Portfolio Builder</h4>
+                    <h4 className="font-semibold text-white mb-2">Portfolio Building</h4>
                     <p className="text-sm text-white/60">
-                      Showcase your skills and contributions
+                      Build a strong portfolio with meaningful contributions to real projects.
                     </p>
                   </div>
                 </div>
+                
               </CardContent>
             </Card>
           </TabsContent>
@@ -484,15 +434,15 @@ export function BeLLaMainShowcasePage() {
                     <h3 className="text-lg font-semibold text-white">For Project Owners</h3>
                     <div className="space-y-3">
                       <div className="flex items-start gap-3">
-                        <GitFork className="w-5 h-5 text-[#0066FF] mt-1" />
+                        <GitFork className="w-5 h-5 text-[#0066FF] " />
                         <p className="text-sm text-white/80">Upload your GitHub projects to showcase them to the community</p>
                       </div>
                       <div className="flex items-start gap-3">
-                        <Code2 className="w-5 h-5 text-[#0066FF] mt-1" />
+                        <Code2 className="w-5 h-5 text-[#0066FF] " />
                         <p className="text-sm text-white/80">Receive contextual feedback through the smart commenting system</p>
                       </div>
                       <div className="flex items-start gap-3">
-                        <Users className="w-5 h-5 text-[#0066FF] mt-1" />
+                        <Users className="w-5 h-5 text-[#0066FF] " />
                         <p className="text-sm text-white/80">Build a community around your projects</p>
                       </div>
                     </div>
@@ -501,15 +451,15 @@ export function BeLLaMainShowcasePage() {
                     <h3 className="text-lg font-semibold text-white">For Contributors</h3>
                     <div className="space-y-3">
                       <div className="flex items-start gap-3">
-                        <FileCode className="w-5 h-5 text-[#0066FF] mt-1" />
+                        <FileCode className="w-5 h-5 text-[#0066FF] " />
                         <p className="text-sm text-white/80">Browse projects and explore their source code</p>
                       </div>
                       <div className="flex items-start gap-3">
-                        <GitPullRequest className="w-5 h-5 text-[#0066FF] mt-1" />
+                        <GitPullRequest className="w-5 h-5 text-[#0066FF] " />
                         <p className="text-sm text-white/80">Contribute through pull requests and enhance your portfolio</p>
                       </div>
                       <div className="flex items-start gap-3">
-                        <Star className="w-5 h-5 text-[#0066FF] mt-1" />
+                        <Star className="w-5 h-5 text-[#0066FF] " />
                         <p className="text-sm text-white/80">Get recognized for your contributions</p>
                       </div>
                     </div>
@@ -528,22 +478,20 @@ export function BeLLaMainShowcasePage() {
                   <div>
                     <CardTitle className="text-xl text-white">The Story Behind BeLLa</CardTitle>
                     <CardDescription className="text-white/60">
-                      From Academic Project to Developer Platform
+                      From Side Project to Developer Platform
                     </CardDescription>
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-white/80">
-                  BeLLa emerged from a simple observation during my computer science studies: while we learned 
-                  theoretical concepts well, there was a gap in applying these concepts to real-world web development. 
-                  This platform is my solution to that challenge, providing a space where developers can learn by doing 
-                  and contribute to meaningful projects.
+                  BeLLa emerged from a simple observation during my CS studies: there is a big gap between 
+                  academic knowledge and real-world development. I experimented with Web Dev to face real-world challenges
+                  and experience real-world workflows.
                 </p>
                 <p className="text-white/80">
-                  Built using the BeLLa-NERT template, this platform showcases how theoretical knowledge can be 
-                  transformed into practical applications. It's more than just a project management tool - it's a 
-                  learning platform, a portfolio builder, and a community space all in one.
+                This platform is a space where developers can learn by doing and contribute to meaningful projects.
+                Gain much needed experience and enhance their portfolio. Important aspects of real-world development that are not taught in academia.
                 </p>
               </CardContent>
             </Card>
@@ -558,7 +506,7 @@ export function BeLLaMainShowcasePage() {
                   <div>
                     <CardTitle className="text-xl text-white">Platform Roadmap</CardTitle>
                     <CardDescription className="text-white/60">
-                      What's Next for BeLLa
+                      My ideas
                     </CardDescription>
                   </div>
                 </div>
@@ -578,7 +526,7 @@ export function BeLLaMainShowcasePage() {
                       </div>
                       <div className="flex items-start gap-3">
                         <div className="w-2 h-2 rounded-full bg-green-500 mt-2" />
-                        <p className="text-white/80">Basic portfolio and contribution tracking</p>
+                        <p className="text-white/80">Contribution tracking</p>
                       </div>
                     </div>
                   </div>
@@ -605,63 +553,79 @@ export function BeLLaMainShowcasePage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="contribute" className="space-y-6">
-            <Card className="bg-black/40 border-white/10 backdrop-blur-xl">
+          {/* Contribute */}
+          <TabsContent value="contribute" className="space-y-12">
+            <Card className="bg-black/40 border-white/10">
               <CardHeader>
                 <div className="flex items-center gap-3">
                   <div className="bg-[#0066FF]/10 p-2 rounded-lg">
-                    <GitPullRequest className="text-[#0066FF] w-5 h-5" />
+                    <Terminal className="text-[#0066FF] w-5 h-5" />
                   </div>
                   <div>
-                    <CardTitle className="text-xl text-white">How to Contribute</CardTitle>
-                    <CardDescription className="text-white/60">
-                      Follow these steps to contribute to {repository.name}
-                    </CardDescription>
+                    <CardTitle className="text-xl text-white">Contribution Guide</CardTitle>
+                    <CardDescription>Help improve BeLLa Platform</CardDescription>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  <div className="relative overflow-hidden bg-white/5 rounded-lg p-6 transition-all duration-300 hover:bg-white/10 group">
-                    <div className="flex items-start gap-4">
-                      <div className="bg-[#0066FF]/10 p-2 rounded-lg">
-                        <Code2 className="text-[#0066FF] w-5 h-5" />
-                      </div>
-                      <div className="space-y-2 flex-1">
-                        <h3 className="text-lg font-semibold text-white">1. Clone the Repository</h3>
-                        <p className="text-white/60">First, clone the repository to your local machine:</p>
-                        <CodeBlock command={`git clone ${repository.html_url}`} />
-                      </div>
-                    </div>
-                  </div>
+              <CardContent className="space-y-6">
+                {/* Clone Step */}
+                <div className="space-y-2">
+                  <h3 className="text-lg text-white font-semibold flex items-center gap-2">
+                    <span className="text-[#0066FF]">1.</span> Clone the Repository
+                  </h3>
+                  <p className="text-sm text-white/60 mb-4">
+                    First, clone the repository to your local machine:
+                  </p>
+                  <CodeBlock className="bg-[#0066FF]/5 border border-[#0066FF]/10" command={`git clone ${repository.html_url}`} />
+                </div>
 
-                  <div className="relative overflow-hidden bg-white/5 rounded-lg p-6 transition-all duration-300 hover:bg-white/10 group">
-                    <div className="flex items-start gap-4">
-                      <div className="bg-[#0066FF]/10 p-2 rounded-lg">
-                        <GitFork className="text-[#0066FF] w-5 h-5" />
-                      </div>
-                      <div className="space-y-2 flex-1">
-                        <h3 className="text-lg font-semibold text-white">2. Create a Branch</h3>
-                        <p className="text-white/60">Create a new branch for your feature:</p>
-                        <CodeBlock command="git checkout -b feature/your-feature-name" />
-                      </div>
-                    </div>
-                  </div>
+                {/* Create Branch Step */}
+                <div className="space-y-2">
+                  <h3 className="text-lg text-white font-semibold flex items-center gap-2">
+                    <span className="text-[#0066FF]">2.</span> Create a Branch
+                  </h3>
+                  <p className="text-sm text-white/60 mb-4">
+                    Create a new branch for your feature or bugfix:
+                  </p>
+                  <CodeBlock className="bg-[#0066FF]/5 border border-[#0066FF]/10" command="git checkout -b feature/your-feature-name" />
+                </div>
 
-                  <div className="relative overflow-hidden bg-white/5 rounded-lg p-6 transition-all duration-300 hover:bg-white/10 group">
-                    <div className="flex items-start gap-4">
-                      <div className="bg-[#0066FF]/10 p-2 rounded-lg">
-                        <GitPullRequest className="text-[#0066FF] w-5 h-5" />
-                      </div>
-                      <div className="space-y-2 flex-1">
-                        <h3 className="text-lg font-semibold text-white">3. Submit Your Changes</h3>
-                        <p className="text-white/60">Commit your changes and create a pull request:</p>
-                        <CodeBlock command="git add ." />
-                        <CodeBlock command='git commit -m "Description of your changes"' />
-                        <CodeBlock command="git push origin feature/your-feature-name" />
-                      </div>
-                    </div>
-                  </div>
+                {/* Make Changes Step */}
+                <div className="space-y-2">
+                  <h3 className="text-lg text-white font-semibold flex items-center gap-2">
+                    <span className="text-[#0066FF]">3.</span> Make Your Changes
+                  </h3>
+                  <p className="text-sm text-white/60 mb-4">
+                    Make your changes and commit them:
+                  </p>
+                  <CodeBlock className="bg-[#0066FF]/5 border border-[#0066FF]/10" command="git add ." />
+                  <CodeBlock className="bg-[#0066FF]/5 border border-[#0066FF]/10" command='git commit -m "Description of your changes"' />
+                  <CodeBlock className="bg-[#0066FF]/5 border border-[#0066FF]/10" command="git push origin feature/your-feature-name" />
+                </div>
+
+                {/* Create PR Step */}
+                <div className="space-y-2">
+                  <h3 className="text-lg text-white font-semibold flex items-center gap-2">
+                    <span className="text-[#0066FF]">4.</span> Create Pull Request
+                  </h3>
+                  <p className="text-sm text-white/60 mb-4">
+                    Go to the GitHub repository and create a new pull request from your branch.
+                  </p>
+                </div>
+
+                {/* Guidelines Box */}
+                <div className="mt-8 p-4 bg-[#0066FF]/5 rounded-lg border border-[#0066FF]/10">
+                  <h4 className="text-white font-semibold mb-2 flex items-center gap-2">
+                    <Rocket className="w-4 h-4 text-[#0066FF]" />
+                    Contribution Guidelines
+                  </h4>
+                  <ul className="space-y-2 text-sm text-white/60">
+                    <li>• Follow the existing code style and conventions</li>
+                    <li>• Write clear commit messages</li>
+                    <li>• Include tests for new features</li>
+                    <li>• Update documentation as needed</li>
+                    <li>• Be respectful and constructive in discussions</li>
+                  </ul>
                 </div>
               </CardContent>
             </Card>

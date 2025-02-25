@@ -525,46 +525,80 @@ export function BeLLaNERTShowcasePage() {
           </TabsContent>
 
           <TabsContent value="contribute" className="space-y-12">
-            <div className="flex justify-center gap-8">
-              <Card className="bg-black/40 w-3/4 border-white/10">
-                <CardHeader>
-                  <div className="flex items-center border-b border-white/10 gap-3">
-                    <div className="bg-[#0066FF]/10 p-2 rounded-lg mb-4">
-                      <Code2 className="text-[#0066FF] w-5 h-5" />
-                    </div>
-                    <div className="mb-4">
-                      <CardTitle className="text-xl text-white">How to Contribute</CardTitle>
-                      <CardDescription className="text-white/60">Help improve NERT</CardDescription>
-                    </div>
+            <Card className="bg-black/40 border-white/10">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="bg-[#0066FF]/10 p-2 rounded-lg">
+                    <Terminal className="text-[#0066FF] w-5 h-5" />
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-3">
-                      <CheckCircle2 className="w-4 h-4 text-[#0066FF] mt-4" />
-                      <div>
-                        <h4 className="font-semibold text-white/90">Report Issues</h4>
-                        <p className="text-sm text-white/60">Help us identify and fix bugs</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <CheckCircle2 className="w-4 h-4 text-[#0066FF] mt-4" />
-                      <div>
-                        <h4 className="font-semibold text-white/90">Suggest Features</h4>
-                        <p className="text-sm text-white/60">Share your ideas for improvements</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <CheckCircle2 className="w-4 h-4 text-[#0066FF] mt-4" />
-                      <div>
-                        <h4 className="font-semibold text-white/90">Submit PRs</h4>
-                        <p className="text-sm text-white/60">Contribute code or documentation updates</p>
-                      </div>
-                    </div>
+                  <div>
+                    <CardTitle className="text-xl text-white">Contribution Guide</CardTitle>
+                    <CardDescription>Help improve BeLLa-NERT</CardDescription>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Clone Step */}
+                <div className="space-y-2">
+                  <h3 className="text-lg text-white font-semibold flex items-center gap-2">
+                    <span className="text-[#0066FF]">1.</span> Clone the Repository
+                  </h3>
+                  <p className="text-sm text-white/60 mb-4">
+                    First, clone the repository to your local machine:
+                  </p>
+                  <CodeBlock className="bg-[#0066FF]/5 border border-[#0066FF]/10" command={`git clone ${repository.html_url}`} />
+                </div>
+
+                {/* Create Branch Step */}
+                <div className="space-y-2">
+                  <h3 className="text-lg text-white font-semibold flex items-center gap-2">
+                    <span className="text-[#0066FF]">2.</span> Create a Branch
+                  </h3>
+                  <p className="text-sm text-white/60 mb-4">
+                    Create a new branch for your feature or bugfix:
+                  </p>
+                  <CodeBlock className="bg-[#0066FF]/5 border border-[#0066FF]/10" command="git checkout -b feature/your-feature-name" />
+                </div>
+
+                {/* Make Changes Step */}
+                <div className="space-y-2">
+                  <h3 className="text-lg text-white font-semibold flex items-center gap-2">
+                    <span className="text-[#0066FF]">3.</span> Make Your Changes
+                  </h3>
+                  <p className="text-sm text-white/60 mb-4">
+                    Make your changes and commit them:
+                  </p>
+                  <CodeBlock className="bg-[#0066FF]/5 border border-[#0066FF]/10" command="git add ." />
+                  <CodeBlock className="bg-[#0066FF]/5 border border-[#0066FF]/10" command='git commit -m "Description of your changes"' />
+                  <CodeBlock className="bg-[#0066FF]/5 border border-[#0066FF]/10" command="git push origin feature/your-feature-name" />
+                </div>
+
+                {/* Create PR Step */}
+                <div className="space-y-2">
+                  <h3 className="text-lg text-white font-semibold flex items-center gap-2">
+                    <span className="text-[#0066FF]">4.</span> Create Pull Request
+                  </h3>
+                  <p className="text-sm text-white/60 mb-4">
+                    Go to the GitHub repository and create a new pull request from your branch.
+                  </p>
+                </div>
+
+                {/* Guidelines Box */}
+                <div className="mt-8 p-4 bg-[#0066FF]/5 rounded-lg border border-[#0066FF]/10">
+                  <h4 className="text-white font-semibold mb-2 flex items-center gap-2">
+                    <Rocket className="w-4 h-4 text-[#0066FF]" />
+                    Contribution Guidelines
+                  </h4>
+                  <ul className="space-y-2 text-sm text-white/60">
+                    <li>• Follow the existing code style and conventions</li>
+                    <li>• Write clear commit messages</li>
+                    <li>• Include tests for new features</li>
+                    <li>• Update documentation as needed</li>
+                    <li>• Be respectful and constructive in discussions</li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
