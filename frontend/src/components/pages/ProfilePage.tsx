@@ -63,6 +63,62 @@ export function ProfilePage() {
     remaining: 5
   });
   
+  // Ref to coordinate like refreshes
+  const likeRefreshCoordinator = useRef<{
+    lastRefreshTime: number,
+    refreshPromise: Promise<void> | null,
+    projectIds: Set<string>
+  }>({
+    lastRefreshTime: 0,
+    refreshPromise: null,
+    projectIds: new Set()
+  });
+  
+  // Coordinated refresh function
+  const coordinatedRefreshLikes = async (newProjectIds: string[]) => {
+    if (!user || !newProjectIds.length) return;
+    
+    const now = Date.now();
+    const coordinator = likeRefreshCoordinator.current;
+    
+    // Add new project IDs to the set
+    newProjectIds.forEach(id => coordinator.projectIds.add(id));
+    
+    // If a refresh is already in progress, don't start another one
+    if (coordinator.refreshPromise) {
+      console.log('Refresh already in progress, added IDs to next batch');
+      return;
+    }
+    
+    // If we've refreshed recently, wait before doing another refresh
+    if (now - coordinator.lastRefreshTime < 5000) {
+      const waitTime = 5000 - (now - coordinator.lastRefreshTime);
+      console.log(`Waiting ${waitTime}ms before refreshing likes`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+    
+    // Start a new refresh with all accumulated IDs
+    const idsToRefresh = Array.from(coordinator.projectIds);
+    coordinator.projectIds.clear();
+    coordinator.lastRefreshTime = Date.now();
+    
+    try {
+      console.log(`Refreshing likes for ${idsToRefresh.length} projects`);
+      coordinator.refreshPromise = refreshLikes(idsToRefresh);
+      await coordinator.refreshPromise;
+    } catch (error) {
+      console.error('Error in coordinated refresh:', error);
+    } finally {
+      coordinator.refreshPromise = null;
+      
+      // If more IDs accumulated while we were refreshing, refresh again
+      if (coordinator.projectIds.size > 0) {
+        console.log(`Found ${coordinator.projectIds.size} more IDs to refresh`);
+        setTimeout(() => coordinatedRefreshLikes([]), 100);
+      }
+    }
+  };
+
   useEffect(() => {
     // Redirect to login if not authenticated
     if (!user) {
@@ -130,7 +186,7 @@ export function ProfilePage() {
         // Refresh likes for these projects
         if (data.projects?.length > 0) {
           const projectIds = data.projects.map(p => p._id).filter(Boolean);
-          await refreshLikes(projectIds);
+          await coordinatedRefreshLikes(projectIds);
         }
       } catch (error: any) {
         console.error('Error fetching user projects:', error);
@@ -188,17 +244,8 @@ export function ProfilePage() {
             });
           
           if (projectIds.length > 0) {
-            // Use a debounce mechanism to prevent excessive refreshes
-            const refreshKey = projectIds.sort().join(',');
-            const now = Date.now();
-            const lastRefresh = (window as any)._profileLikeRefreshTime || 0;
-            
-            if (now - lastRefresh > 5000) { // Only refresh if it's been more than 5 seconds
-              (window as any)._profileLikeRefreshTime = now;
-              await refreshLikes(projectIds);
-            } else {
-              console.log('Skipping profile likes refresh - too soon since last refresh');
-            }
+            // Use our coordinated refresh mechanism
+            await coordinatedRefreshLikes(projectIds);
           }
         }
       } catch (error: any) {

@@ -10,6 +10,14 @@ const { burstLimiter } = require('../middleware/rateLimiter');
  * All routes require authentication
  */
 
+// Get like counts for multiple projects - moved up to ensure this route is matched first
+router.post(
+  '/counts',
+  authenticate,
+  validateBody(schemas.like.counts),
+  likeController.getLikeCounts
+);
+
 // Toggle like status for a project
 router.post(
   '/:projectId',
@@ -25,14 +33,6 @@ router.get(
   authenticate,
   validateParams(schemas.like.params),
   likeController.getLikeStatus
-);
-
-// Get like counts for multiple projects
-router.post(
-  '/counts',
-  authenticate,
-  validateBody(schemas.like.counts),
-  likeController.getLikeCounts
 );
 
 /**

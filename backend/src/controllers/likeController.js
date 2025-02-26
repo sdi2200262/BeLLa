@@ -103,9 +103,14 @@ const likeController = {
    */
   getLikeCounts: asyncHandler(async (req, res) => {
     try {
+      // Add debugging to see what's in the request body
+      console.log('getLikeCounts received request body:', req.body);
+      console.log('Content-Type:', req.get('Content-Type'));
+      
       const { projectIds } = req.body;
       
       if (!projectIds || !Array.isArray(projectIds)) {
+        console.log('projectIds validation failed:', { projectIds, type: typeof projectIds, isArray: Array.isArray(projectIds) });
         return res.json({
           counts: {},
           cached: false,
@@ -117,6 +122,9 @@ const likeController = {
       const validIds = projectIds.filter(id => 
         typeof id === 'string' && /^[0-9a-fA-F]{24}$/.test(id)
       );
+      
+      // Add debug for what IDs we found valid
+      console.log(`Found ${validIds.length} valid IDs out of ${projectIds.length}`);
       
       if (validIds.length === 0) {
         return res.json({

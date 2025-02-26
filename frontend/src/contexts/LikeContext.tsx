@@ -44,26 +44,30 @@ export function LikeProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Create a cache key based on the current time
+      const cacheKey = validProjectIds.sort().join(',');
+      
+      // IMPROVED: Check if we're already refreshing these IDs - log the current pending state
+      console.log('Current pending refreshes:', Object.keys(pendingRefreshes.current));
+      if (pendingRefreshes.current[cacheKey]) {
+        console.log(`Skipping refresh for ${cacheKey} - already in progress`);
+        return;
+      }
+      
+      console.log(`Starting refresh for ${cacheKey} - marking as pending`);
+      // Mark this refresh as pending BEFORE any async operations
+      pendingRefreshes.current[cacheKey] = true;
+      
       // Only refresh if it's been more than 5 seconds since the last refresh for these IDs
       const now = Date.now();
-      const cacheKey = validProjectIds.sort().join(',');
       const lastRefreshTime = (window as any)._likeRefreshCache?.[cacheKey] || 0;
       
       if (now - lastRefreshTime < 5000) {
         console.log('Skipping refresh - too soon since last refresh');
+        pendingRefreshes.current[cacheKey] = false; // Clear the pending flag
         return;
       }
       
-      // Check if we're already refreshing these IDs
-      if (pendingRefreshes.current[cacheKey]) {
-        console.log('Skipping refresh - already in progress');
-        return;
-      }
-      
-      // Mark this refresh as pending
-      pendingRefreshes.current[cacheKey] = true;
-      
-      // Update the cache time
+      // Update the cache time AFTER checking if we should proceed
       if (!(window as any)._likeRefreshCache) {
         (window as any)._likeRefreshCache = {};
       }
@@ -76,20 +80,47 @@ export function LikeProvider({ children }: { children: React.ReactNode }) {
       try {
         // Only make the API call if we have valid project IDs
         if (validProjectIds.length > 0) {
+          // Try a completely different approach to send the request
+          console.log('Preparing request to /likes/counts with', validProjectIds.length, 'project IDs');
+          
+          // Ensure we have a proper array before JSON stringify
+          const payload = {
+            projectIds: Array.from(validProjectIds) // Force it to be an array
+          };
+          
+          // Log the payload
+          console.log('Request payload:', payload);
+          console.log('JSON.stringify result:', JSON.stringify(payload));
+          
+          // Make the request with extra careful attention to headers and formatting
           const countsResponse = await fetch(`${API_BASE_URL}/likes/counts`, {
             method: 'POST',
-            ...defaultFetchOptions,
+            credentials: 'include',
             headers: {
-              ...defaultFetchOptions.headers,
-              Authorization: `Bearer ${token}`
-            } as HeadersInit,
-            body: JSON.stringify({ projectIds: validProjectIds }),
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(payload),
             signal: controller.signal
           });
           
+          // Log the full response for debugging
+          const responseStatus = countsResponse.status;
+          const responseStatusText = countsResponse.statusText;
+          console.log(`Response status: ${responseStatus} ${responseStatusText}`);
+          
+          // Log any potential parsing issues
+          if (!countsResponse.ok) {
+            const text = await countsResponse.text();
+            console.error('Error response from /likes/counts:', text);
+            throw new Error(`API error: ${responseStatus} ${text}`);
+          }
+          
           const countsData = await handleResponse<{ counts: Record<string, number> }>(countsResponse);
           
-          // Update like counts atomically
+          // Success - update like counts atomically
+          console.log('Successfully received like counts:', countsData);
           setLikeCounts(prev => ({
             ...prev,
             ...countsData.counts
