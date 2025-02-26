@@ -1,8 +1,15 @@
 const mongoose = require('mongoose');
 const { Octokit } = require('octokit');
+const { AUTH_CONFIG, PROJECT_LIMITS } = require('../config/config');
+const logger = require('../services/logService');
+const cacheService = require('../services/cacheService');
 
+// Initialize Octokit with config
 const octokit = new Octokit({
-  auth: process.env.GITHUB_TOKEN
+  auth: process.env.GITHUB_TOKEN,
+  request: {
+    timeout: AUTH_CONFIG.GITHUB.API_TIMEOUT
+  }
 });
 
 /**
@@ -34,7 +41,7 @@ const projectSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['active', 'error', 'archived'],
+    enum: ['active', 'error'],
     default: 'active',
     index: true
   },
@@ -87,25 +94,56 @@ projectSchema.pre('save', async function(next) {
       }
 
       const [_, owner, repo] = match;
+      const repoName = repo.replace('.git', '');
       
-      // Use GitHub API to validate repository
-      const { data } = await octokit.rest.repos.get({
-        owner,
-        repo: repo.replace('.git', '')
-      });
-
-      // Update metadata
-      this.metadata = {
-        stars: data.stargazers_count,
-        forks: data.forks_count,
-        lastCommit: data.pushed_at,
-        language: data.language,
-        topics: data.topics || []
-      };
-      this.status = 'active';
-
+      // Check cache first
+      const cacheKey = `repo:${owner}/${repoName}`;
+      const cachedData = cacheService.get('github', cacheKey);
+      
+      if (cachedData) {
+        this.metadata = cachedData;
+        this.status = 'active';
+        this.lastChecked = new Date();
+        return next();
+      }
+      
+      // Use GitHub API to validate repository with retry logic
+      let retries = AUTH_CONFIG.GITHUB.MAX_RETRIES;
+      let success = false;
+      
+      while (retries > 0 && !success) {
+        try {
+          const { data } = await octokit.rest.repos.get({
+            owner,
+            repo: repoName
+          });
+          
+          // Update metadata
+          this.metadata = {
+            stars: data.stargazers_count,
+            forks: data.forks_count,
+            lastCommit: data.pushed_at,
+            language: data.language,
+            topics: data.topics || []
+          };
+          
+          // Cache the result
+          cacheService.set('github', cacheKey, this.metadata);
+          
+          this.status = 'active';
+          this.lastChecked = new Date();
+          success = true;
+        } catch (error) {
+          retries--;
+          if (retries === 0) {
+            throw error;
+          }
+          // Wait before retry with exponential backoff
+          await new Promise(resolve => setTimeout(resolve, 1000 * (AUTH_CONFIG.GITHUB.MAX_RETRIES - retries)));
+        }
+      }
     } catch (error) {
-      console.error('Error validating repository:', error);
+      logger.error('Error validating repository:', error);
       this.status = 'error';
       this.metadata = { 
         ...this.metadata, 
@@ -115,5 +153,19 @@ projectSchema.pre('save', async function(next) {
   }
   next();
 });
+
+// Static method to check user project limits
+projectSchema.statics.checkUserLimit = async function(userId) {
+  const count = await this.countDocuments({
+    userId
+  });
+  
+  return {
+    current: count,
+    limit: PROJECT_LIMITS.PROJECTS_PER_USER,
+    remaining: Math.max(0, PROJECT_LIMITS.PROJECTS_PER_USER - count),
+    exceeded: count >= PROJECT_LIMITS.PROJECTS_PER_USER
+  };
+};
 
 module.exports = mongoose.model('Project', projectSchema); 

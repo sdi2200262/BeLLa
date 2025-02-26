@@ -22,7 +22,8 @@ import {
   XCircle,
   Terminal,
   Copy,
-  Check
+  Check,
+  Heart
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
@@ -41,6 +42,8 @@ import {
 import { API_BASE_URL, defaultFetchOptions, handleResponse } from "@/config/api";
 import { Button } from "../ui/button";
 import CodeBlock from "../ui/CodeBlock";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 interface Repository {
   name: string;
@@ -95,11 +98,16 @@ interface FileTreeResponse {
 
 export function ProjectShowcasePage() {
   const { owner, repoName } = useParams();
+  const { user, getAuthToken } = useAuth();
   const [repository, setRepository] = useState<Repository | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
   const [error, setError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [fileContent, setFileContent] = useState<string>("");
+  const [projectId, setProjectId] = useState<string | null>(null);
+  const [likeCount, setLikeCount] = useState(0);
+  const [liked, setLiked] = useState(false);
+  const [isLikeLoading, setIsLikeLoading] = useState(false);
 
   // Transform GitHub tree data to FileSelector format
   const transformTreeData = (node: any): FileNode => {
@@ -120,6 +128,31 @@ export function ProjectShowcasePage() {
 
         const repoUrl = `https://github.com/${owner}/${repoName}`;
         console.log('Fetching repository data for:', repoUrl);
+        
+        // First, try to get the project ID
+        try {
+          const projectResponse = await fetch(
+            `${API_BASE_URL}/projects?search=${encodeURIComponent(repoUrl)}`,
+            {
+              ...defaultFetchOptions,
+              signal: AbortSignal.timeout(30000)
+            }
+          );
+          
+          const projectData = await handleResponse<{ projects: Project[] }>(projectResponse);
+          if (projectData.projects && projectData.projects.length > 0) {
+            const project = projectData.projects[0];
+            setProjectId(project._id);
+            
+            // If user is logged in, fetch like status
+            if (user) {
+              await fetchLikeStatus(project._id);
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching project ID:', error);
+          // Continue even if we can't get the project ID
+        }
         
         const repoResponse = await fetch(
           `${API_BASE_URL}/projects/data?url=${encodeURIComponent(repoUrl)}`,
@@ -157,7 +190,70 @@ export function ProjectShowcasePage() {
     };
 
     fetchProjectData();
-  }, [owner, repoName]);
+  }, [owner, repoName, user]);
+
+  // Fetch like status for a project
+  const fetchLikeStatus = async (id: string) => {
+    if (!user) return;
+    
+    try {
+      const token = getAuthToken();
+      const response = await fetch(`${API_BASE_URL}/likes/${id}`, {
+        ...defaultFetchOptions,
+        headers: {
+          ...defaultFetchOptions.headers,
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        } as HeadersInit
+      });
+      
+      const data = await handleResponse<{ liked: boolean; likeCount: number }>(response);
+      setLiked(data.liked);
+      setLikeCount(data.likeCount);
+    } catch (error) {
+      console.error('Error fetching like status:', error);
+    }
+  };
+
+  // Handle like button click
+  const handleLikeClick = async () => {
+    if (!user) {
+      toast.error("Please sign in to like projects");
+      return;
+    }
+    
+    if (!projectId) {
+      toast.error("This project hasn't been added to BeLLa yet");
+      return;
+    }
+    
+    if (isLikeLoading) return;
+    
+    setIsLikeLoading(true);
+    
+    try {
+      const token = getAuthToken();
+      const response = await fetch(`${API_BASE_URL}/likes/${projectId}`, {
+        method: 'POST',
+        ...defaultFetchOptions,
+        headers: {
+          ...defaultFetchOptions.headers,
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        } as HeadersInit
+      });
+      
+      const data = await handleResponse<{ liked: boolean; likeCount: number }>(response);
+      
+      setLiked(data.liked);
+      setLikeCount(data.likeCount);
+      
+      toast.success(data.liked ? "Added to your liked projects" : "Removed from your liked projects");
+    } catch (error) {
+      console.error("Error toggling like:", error);
+      toast.error("Failed to update like status");
+    } finally {
+      setIsLikeLoading(false);
+    }
+  };
 
   useEffect(() => {
     const fetchFileContent = async () => {
@@ -291,31 +387,64 @@ export function ProjectShowcasePage() {
           </Breadcrumb>
 
           {/* Header */}
-          <div className="mt-6 flex items-center gap-6">
-            <div className="relative group">
-              <img 
-                src={repository.owner.avatar_url} 
-                alt={repository.owner.login}
-                className="w-16 h-16 rounded-full ring-2 ring-white/10 transition-all duration-300 group-hover:ring-[#0066FF]"
-              />
-              <div className="absolute -bottom-2 -right-2 bg-[#0066FF]/10 p-2 rounded-full ring-2 ring-black transition-all duration-300 group-hover:bg-[#0066FF]/20">
-                <GithubIcon className="w-4 h-4 text-[#0066FF]" />
+          <div className="mt-6 flex items-center justify-between">
+            <div className="flex items-center gap-6">
+              <div className="relative group">
+                <img 
+                  src={repository.owner.avatar_url} 
+                  alt={repository.owner.login}
+                  className="w-16 h-16 rounded-full ring-2 ring-white/10 transition-all duration-300 group-hover:ring-[#0066FF]"
+                />
+                <div className="absolute -bottom-2 -right-2 bg-[#0066FF]/10 p-2 rounded-full ring-2 ring-black transition-all duration-300 group-hover:bg-[#0066FF]/20">
+                  <GithubIcon className="w-4 h-4 text-[#0066FF]" />
+                </div>
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold flex items-center gap-3">
+                  {repository.name}
+                  <a 
+                    href={repository.html_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-white/60 hover:text-[#0066FF] transition-colors duration-300"
+                  >
+                    <LinkIcon className="w-4 h-4" />
+                  </a>
+                </h1>
+                <p className="text-white/60">by {repository.owner.login}</p>
               </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold flex items-center gap-3">
-                {repository.name}
-                <a 
-                  href={repository.html_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-white/60 hover:text-[#0066FF] transition-colors duration-300"
-                >
-                  <LinkIcon className="w-4 h-4" />
-                </a>
-              </h1>
-              <p className="text-white/60">by {repository.owner.login}</p>
-            </div>
+            
+            {/* Like Button */}
+            {projectId && (
+              <Button 
+                variant="outline" 
+                className={cn(
+                  "transition-all duration-300 gap-2",
+                  liked ? "bg-[#FF3366]/10 text-[#FF3366] border-[#FF3366]/20 hover:bg-[#FF3366]/20 hover:border-[#FF3366]/30" 
+                       : "bg-white/5 text-white/70 border-white/10 hover:bg-white/10 hover:border-white/20"
+                )}
+                onClick={handleLikeClick}
+                disabled={isLikeLoading}
+              >
+                <Heart 
+                  className={cn(
+                    "w-5 h-5 transition-all duration-300",
+                    liked ? "fill-[#FF3366] text-[#FF3366]" : "",
+                    isLikeLoading ? "animate-pulse" : ""
+                  )} 
+                />
+                {liked ? "Liked" : "Like"}
+                {likeCount > 0 && (
+                  <span className={cn(
+                    "ml-1 text-sm bg-black/20 px-2 py-0.5 rounded-full",
+                    liked ? "text-[#FF3366]" : "text-white/70"
+                  )}>
+                    {likeCount}
+                  </span>
+                )}
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -393,12 +522,15 @@ export function ProjectShowcasePage() {
                     </div>
                     <div className="relative overflow-hidden bg-white/5 rounded-lg p-4 transition-all duration-300 hover:bg-white/10 group">
                       <div className="relative z-10">
-                        <div className="text-2xl font-bold text-white group-hover:text-[#0066FF] transition-colors duration-300">
-                          {repository.open_issues_count}
+                        <div className="text-2xl font-bold text-white group-hover:text-[#FF3366] transition-colors duration-300">
+                          {likeCount}
                         </div>
-                        <div className="text-sm text-white/60">Issues</div>
+                        <div className="text-sm text-white/60">Likes</div>
                       </div>
-                      <AlertCircle className="absolute -right-4 -bottom-4 w-20 h-20 text-white/5 group-hover:text-[#0066FF]/5 transition-colors duration-300" />
+                      <Heart className={cn(
+                        "absolute -right-4 -bottom-4 w-20 h-20 text-white/5 group-hover:text-[#FF3366]/5 transition-colors duration-300",
+                        liked ? "fill-[#FF3366]/5" : ""
+                      )} />
                     </div>
                   </div>
 

@@ -4,28 +4,95 @@ const cors = require('cors');
 const compression = require('compression');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
-const rateLimit = require('express-rate-limit');
-const connectDB = require('./config/database');
+const mongoose = require('mongoose');
+const { 
+  PORT, 
+  FRONTEND_URL, 
+  SERVER_LIMITS, 
+  IS_PROD,
+  DB_CONFIG
+} = require('./config/config');
+const { 
+  standardLimiter, 
+  burstLimiter, 
+  abuseDetection 
+} = require('./middleware/rateLimiter');
+const { 
+  errorHandler, 
+  notFound 
+} = require('./middleware/errorHandler');
+const requestLogger = require('./middleware/requestLogger');
+const logger = require('./services/logService');
 
 // Import routes
 const projectRoutes = require('./routes/projectRoutes');
 const contributorsRoutes = require('./routes/contributorsRoutes');
 const authRoutes = require('./routes/authRoutes');
+const likeRoutes = require('./routes/likeRoutes');
 
 // Initialize app
 const app = express();
-const PORT = process.env.PORT || 3001;
 
 /**
- * Free Tier Optimizations
+ * Connect to MongoDB
+ * With retry logic and connection monitoring
  */
-const LIMITS = {
-  REQUESTS_PER_HOUR: 300,    // Free tier request limit
-  PAYLOAD_SIZE: '250kb',     // Reduced payload size
-  MEMORY_THRESHOLD: 450,     // 450MB memory limit (512MB total)
-  COMPRESSION_THRESHOLD: 1024, // Compress responses over 1KB
-  SERVER_TIMEOUT: 30000      // 30 second timeout to match frontend
-};
+async function connectDB() {
+  let retries = DB_CONFIG.RETRY_ATTEMPTS;
+  let connected = false;
+
+  while (retries > 0 && !connected) {
+    try {
+      const conn = await mongoose.connect(DB_CONFIG.URI, DB_CONFIG.OPTIONS);
+      
+      // Connection successful
+      logger.info(`MongoDB Connected: ${conn.connection.host}`);
+      connected = true;
+
+      // Connection monitoring
+      mongoose.connection.on('disconnected', () => {
+        logger.warn('MongoDB disconnected. Attempting to reconnect...');
+      });
+
+      mongoose.connection.on('reconnected', () => {
+        logger.info('MongoDB reconnected');
+      });
+
+      mongoose.connection.on('error', (err) => {
+        logger.error('MongoDB connection error:', err);
+        if (err.name === 'MongoServerSelectionError') {
+          logger.warn('Server selection timeout - check network or MongoDB status');
+        }
+      });
+
+      // Graceful shutdown
+      process.on('SIGINT', async () => {
+        try {
+          await mongoose.connection.close();
+          logger.info('MongoDB connection closed through app termination');
+          process.exit(0);
+        } catch (err) {
+          logger.error('Error during MongoDB shutdown:', err);
+          process.exit(1);
+        }
+      });
+
+    } catch (error) {
+      logger.error('MongoDB connection error:', error);
+      retries -= 1;
+      
+      if (retries === 0) {
+        logger.error(`Failed to connect to MongoDB after ${DB_CONFIG.RETRY_ATTEMPTS} attempts`);
+        process.exit(1);
+      }
+      
+      // Exponential backoff
+      const delay = Math.pow(2, DB_CONFIG.RETRY_ATTEMPTS - retries) * 1000;
+      logger.info(`Retrying in ${delay/1000} seconds...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+}
 
 // Connect to MongoDB with optimized settings
 connectDB();
@@ -34,9 +101,12 @@ connectDB();
  * Core Middleware - Optimized for Free Tier
  */
 
+// Request logging
+app.use(requestLogger);
+
 // Server timeout settings
 app.use((req, res, next) => {
-  res.setTimeout(LIMITS.SERVER_TIMEOUT, () => {
+  res.setTimeout(SERVER_LIMITS.SERVER_TIMEOUT, () => {
     res.status(408).json({ error: 'Request timeout' });
   });
   next();
@@ -45,21 +115,15 @@ app.use((req, res, next) => {
 // Security
 app.use(helmet());
 
-// Rate limiting
-app.use(rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: LIMITS.REQUESTS_PER_HOUR,
-  message: {
-    error: 'Too many requests',
-    message: 'Please try again in an hour'
-  },
-  skip: (req) => req.path === '/health'
-}));
+// Rate limiting and abuse prevention
+app.use(abuseDetection);
+app.use(burstLimiter);
+app.use(standardLimiter);
 
 // Compression
 app.use(compression({
   level: 6,
-  threshold: LIMITS.COMPRESSION_THRESHOLD,
+  threshold: SERVER_LIMITS.COMPRESSION_THRESHOLD,
   filter: (req, res) => {
     if (req.headers['x-no-compression']) return false;
     return compression.filter(req, res);
@@ -69,19 +133,17 @@ app.use(compression({
 // Body parsing with size limits
 app.use(cookieParser());
 app.use(express.json({ 
-  limit: LIMITS.PAYLOAD_SIZE,
+  limit: SERVER_LIMITS.PAYLOAD_SIZE,
   strict: true 
 }));
 app.use(express.urlencoded({ 
   extended: true,
-  limit: LIMITS.PAYLOAD_SIZE
+  limit: SERVER_LIMITS.PAYLOAD_SIZE
 }));
 
 // CORS with security headers
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? process.env.FRONTEND_URL 
-    : 'http://localhost:3000',
+  origin: IS_PROD ? FRONTEND_URL : 'http://localhost:3000',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept'],
@@ -95,6 +157,7 @@ app.use(cors({
 app.use('/api/projects', projectRoutes);
 app.use('/api/contributors', contributorsRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/likes', likeRoutes);
 
 // Health check with memory monitoring
 app.get('/health', (req, res) => {
@@ -106,41 +169,30 @@ app.get('/health', (req, res) => {
     uptime: process.uptime(),
     memory: {
       used: usedMemoryMB,
-      limit: LIMITS.MEMORY_THRESHOLD,
-      percent: Math.round((usedMemoryMB / LIMITS.MEMORY_THRESHOLD) * 100)
+      limit: SERVER_LIMITS.MEMORY_THRESHOLD,
+      percent: Math.round((usedMemoryMB / SERVER_LIMITS.MEMORY_THRESHOLD) * 100)
     },
     tier: 'free',
     limits: {
-      requestsPerHour: LIMITS.REQUESTS_PER_HOUR,
-      payloadSize: LIMITS.PAYLOAD_SIZE
+      requestsPerHour: SERVER_LIMITS.REQUESTS_PER_HOUR,
+      payloadSize: SERVER_LIMITS.PAYLOAD_SIZE
     }
   });
 });
 
-// Error handler with memory cleanup
-app.use((err, req, res, next) => {
-  // Check memory usage on errors
-  const memoryUsage = Math.round(process.memoryUsage().heapUsed / 1024 / 1024);
-  if (memoryUsage > LIMITS.MEMORY_THRESHOLD) {
-    console.warn(`High memory usage: ${memoryUsage}MB`);
-    global.gc && global.gc(); // Force garbage collection if available
-  }
+// 404 handler
+app.use(notFound);
 
-  console.error('Error:', err.message);
-  res.status(err.status || 500).json({
-    error: process.env.NODE_ENV === 'production' 
-      ? 'An error occurred' 
-      : err.message
-  });
-});
+// Error handler
+app.use(errorHandler);
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
-  console.log('Shutting down gracefully...');
+  logger.info('Shutting down gracefully...');
   app.close(() => process.exit(0));
 });
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT} (Free Tier)`);
+  logger.info(`Server running on port ${PORT} (Free Tier)`);
 }); 

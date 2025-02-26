@@ -1,11 +1,15 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Star, GitFork, Scale, GitCommit, FileCode, GithubIcon, AlertCircle } from "lucide-react";
+import { Star, GitFork, Scale, GitCommit, FileCode, GithubIcon, AlertCircle, Heart, Loader2 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "./card";
 import { LanguageBar } from "./LanguageBar";
 import { cn } from "@/lib/utils";
 import { getLanguageColor } from "@/lib/colors";
 import { API_BASE_URL, defaultFetchOptions, handleResponse, APIError } from "@/config/api";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "./button";
+import { toast } from "sonner";
+import { useLikes } from '@/contexts/LikeContext';
 
 interface Repository {
   name: string;
@@ -49,6 +53,9 @@ interface ProjectCardProps {
   hoverScale?: string;
   iconSize?: number;
   onClick?: () => void;
+  projectId?: string;
+  initialLikeCount?: number;
+  initialLiked?: boolean;
 }
 
 export function ProjectCard({ 
@@ -65,9 +72,14 @@ export function ProjectCard({
   secondaryTextColor = "text-white/70",
   hoverScale = "hover:scale-105",
   iconSize = 4,
-  onClick
+  onClick,
+  projectId,
+  initialLikeCount = 0,
+  initialLiked = false
 }: ProjectCardProps) {
   const navigate = useNavigate();
+  const { user, getAuthToken } = useAuth();
+  const { likedProjects, likeCounts, toggleLike, isLikeLoading } = useLikes();
   const [repository, setRepository] = useState<Repository | null>(null);
   const [error, setError] = useState<string | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -150,7 +162,12 @@ export function ProjectCard({
     }));
   };
 
-  const handleCardClick = () => {
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Don't navigate if clicking on the like button
+    if ((e.target as HTMLElement).closest('.like-button')) {
+      return;
+    }
+    
     if (onClick) {
       onClick();
     } else if (repository) {
@@ -161,6 +178,34 @@ export function ProjectCard({
         navigate(`/projects/${owner}/${repo}`);
       }
     }
+  };
+
+  // Use the values from the LikeContext with proper fallbacks
+  const liked = projectId ? likedProjects[projectId] ?? initialLiked ?? false : false;
+  const likeCount = projectId ? likeCounts[projectId] ?? initialLikeCount ?? 0 : 0;
+  const isLikeLoadingForThisProject = projectId ? isLikeLoading[projectId] ?? false : false;
+
+  const handleLikeClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!projectId) {
+      toast.error("Cannot like this project");
+      return;
+    }
+    
+    if (!user) {
+      toast.error("Please sign in to like projects");
+      return;
+    }
+    
+    // Prevent multiple clicks while loading
+    if (isLikeLoadingForThisProject) {
+      return;
+    }
+    
+    // Use the toggleLike function from the LikeContext
+    await toggleLike(projectId);
   };
 
   if (error || repository?.status === 'error') {
@@ -231,10 +276,29 @@ export function ProjectCard({
       )}>
         <CardHeader className="space-y-3">
           <div className="flex items-start justify-between gap-3">
-            <div className="space-y-1">
-              <CardTitle className={cn("text-2xl", textColor, titleClassName)}>
-                {repository.name}
-              </CardTitle>
+            <div className="space-y-1 flex-1">
+              <div className="flex items-center justify-between">
+                <CardTitle className={cn("text-2xl", textColor, titleClassName)}>
+                  {repository.name}
+                </CardTitle>
+                {projectId && (
+                  <button
+                    onClick={handleLikeClick}
+                    disabled={isLikeLoadingForThisProject}
+                    className={cn(
+                      "flex items-center gap-1 text-sm transition-all duration-300",
+                      liked ? "text-[#FF3366]" : "text-white/60 hover:text-white"
+                    )}
+                  >
+                    {isLikeLoadingForThisProject ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Heart className={cn("w-4 h-4", liked ? "fill-[#FF3366] text-[#FF3366]" : "")} />
+                    )}
+                    {likeCount > 0 && <span>{likeCount}</span>}
+                  </button>
+                )}
+              </div>
               <div className={cn("text-sm", secondaryTextColor)}>
                 by {repository.owner?.login || "Unknown owner"}
               </div>

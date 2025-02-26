@@ -17,13 +17,17 @@ const ReactMarkdown = lazy(() => import('react-markdown'))
 // Types for file tree data structure
 interface FileTreeNode {
   name: string
-  type: 'file' | 'dir'
+  type: 'file' | 'dir' | 'tree' | 'blob'
   path: string
   children?: FileTreeNode[]
+  content?: string
 }
 
+// Export the type as TreeNode to match imports in other files
+export type TreeNode = FileTreeNode
+
 interface RepoViewerProps {
-  data: FileTreeNode[]
+  data: FileTreeNode | FileTreeNode[]
   className?: string
   height?: string
 }
@@ -72,7 +76,7 @@ const TreeNode = memo(({
   selectedPath: string | null
 }) => {
   const [isExpanded, setIsExpanded] = useState(false)
-  const isFolder = node.type === 'dir'
+  const isFolder = node.type === 'dir' || node.type === 'tree'
   const isSelected = selectedPath === node.path
 
   const handleClick = useCallback(() => {
@@ -132,12 +136,12 @@ export function RepoViewer({ data, className, height = '500px' }: RepoViewerProp
   const handleFileSelect = useCallback((node: FileTreeNode) => {
     setSelectedFile(node)
     // If it's a markdown file, default to showing markdown view
-    if (node.name.toLowerCase().endsWith('.md')) {
+    if (node.name.toLowerCase().endsWith('.md') || node.type === 'blob') {
       setShowMarkdown(true)
     }
   }, [])
 
-  const isMarkdownFile = selectedFile?.name.toLowerCase().endsWith('.md')
+  const isMarkdownFile = selectedFile?.name.toLowerCase().endsWith('.md') || selectedFile?.type === 'blob'
   const language = selectedFile ? getLanguageFromFileName(selectedFile.name) : 'plaintext'
 
   const toggleFolder = (path: string) => {
@@ -154,7 +158,7 @@ export function RepoViewer({ data, className, height = '500px' }: RepoViewerProp
     const isExpanded = expandedFolders.has(node.path)
     const paddingLeft = `${depth * 1.5}rem`
 
-    if (node.type === 'dir') {
+    if (node.type === 'dir' || node.type === 'tree') {
       return (
         <div key={node.path}>
           <button
@@ -374,11 +378,10 @@ export function RepoViewer({ data, className, height = '500px' }: RepoViewerProp
   return (
     <div className={cn('border border-white/10 rounded-lg overflow-hidden', className)} style={{ height }}>
       <ScrollArea style={{ height }} className="p-4">
-        {data?.map(node => renderNode(node)) || (
-          <div className="text-center text-white/40 py-8">
-            No files to display
-          </div>
-        )}
+        {Array.isArray(data) 
+          ? data.map(node => renderNode(node))
+          : renderNode(data)
+        }
       </ScrollArea>
     </div>
   )

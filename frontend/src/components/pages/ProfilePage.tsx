@@ -1,13 +1,14 @@
-import { UserIcon, GithubIcon, GitPullRequestIcon, GitForkIcon, BookIcon, Loader2, AlertCircle, Trash2 } from "lucide-react";
+import { UserIcon, GithubIcon, GitPullRequestIcon, GitForkIcon, BookIcon, Loader2, AlertCircle, Trash2, Heart } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { ProjectCard } from "../ui/ProjectCard";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from "react-router-dom";
 import { fetchContributors, type Contributor } from "@/services/contributorsService";
 import { API_BASE_URL, defaultFetchOptions, handleResponse } from "@/config/api";
+import { useLikes } from '@/contexts/LikeContext';
 
 interface GitHubUser {
   login: string;
@@ -27,6 +28,13 @@ interface Project {
   uploadedBy: string;
   status: string;
   createdAt: string;
+  likeCount?: number;
+  liked?: boolean;
+}
+
+interface ProjectLimits {
+  total: number;
+  remaining: number;
 }
 
 interface ProjectsResponse {
@@ -39,12 +47,15 @@ interface ProjectsResponse {
 
 export function ProfilePage() {
   const { user, loading, logout, getAuthToken } = useAuth();
+  const { refreshLikes } = useLikes();
   const navigate = useNavigate();
   
   const [githubUser, setGithubUser] = useState<GitHubUser | null>(null);
   const [contributions, setContributions] = useState(0);
   const [userProjects, setUserProjects] = useState<Project[]>([]);
+  const [likedProjects, setLikedProjects] = useState<Project[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
+  const [likedProjectsLoading, setLikedProjectsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDeletingMap, setIsDeletingMap] = useState<Record<string, boolean>>({});
   const [projectLimits, setProjectLimits] = useState<{ total: number; remaining: number }>({
@@ -109,12 +120,18 @@ export function ProfilePage() {
           signal: AbortSignal.timeout(60000)
         });
 
-        const data = await handleResponse<ProjectsResponse>(response);
+        const data = await handleResponse<{ projects: Project[]; limits: { projectsPerUser: number; remaining: number } }>(response);
         setUserProjects(data.projects || []);
         setProjectLimits({
           total: data.limits.projectsPerUser,
           remaining: data.limits.remaining
         });
+        
+        // Refresh likes for these projects
+        if (data.projects?.length > 0) {
+          const projectIds = data.projects.map(p => p._id).filter(Boolean);
+          await refreshLikes(projectIds);
+        }
       } catch (error: any) {
         console.error('Error fetching user projects:', error);
         setError(error.message);
@@ -128,10 +145,79 @@ export function ProfilePage() {
       }
     };
 
+    // Fetch user's liked projects
+    const fetchLikedProjects = async () => {
+      setLikedProjectsLoading(true);
+      try {
+        const token = getAuthToken();
+        if (!token) {
+          throw new Error('No authentication token found');
+        }
+
+        const response = await fetch(`${API_BASE_URL}/likes/user/liked`, {
+          ...defaultFetchOptions,
+          headers: {
+            ...defaultFetchOptions.headers,
+            'Authorization': `Bearer ${token}`
+          } as HeadersInit,
+          signal: AbortSignal.timeout(60000)
+        });
+
+        const data = await handleResponse<{ projects: Project[] }>(response);
+        
+        // Ensure all projects have likeCount and liked properties
+        const projectsWithLikes = (data.projects || []).map(project => ({
+          ...project,
+          likeCount: project.likeCount || 0,
+          liked: true // These are all liked by the user
+        }));
+        
+        setLikedProjects(projectsWithLikes);
+        
+        // Refresh likes for these projects - but only if we have valid IDs
+        if (projectsWithLikes.length > 0) {
+          // Filter out any invalid project IDs (must be 24 hex characters)
+          const projectIds = projectsWithLikes
+            .map(p => p._id)
+            .filter(id => {
+              const isValid = id && /^[0-9a-fA-F]{24}$/.test(id);
+              if (!isValid) {
+                console.warn(`Skipping invalid project ID in liked projects: ${id}`);
+              }
+              return isValid;
+            });
+          
+          if (projectIds.length > 0) {
+            // Use a debounce mechanism to prevent excessive refreshes
+            const refreshKey = projectIds.sort().join(',');
+            const now = Date.now();
+            const lastRefresh = (window as any)._profileLikeRefreshTime || 0;
+            
+            if (now - lastRefresh > 5000) { // Only refresh if it's been more than 5 seconds
+              (window as any)._profileLikeRefreshTime = now;
+              await refreshLikes(projectIds);
+            } else {
+              console.log('Skipping profile likes refresh - too soon since last refresh');
+            }
+          }
+        }
+      } catch (error: any) {
+        console.error('Error fetching liked projects:', error);
+        
+        if (error.message?.includes('sign in') || error.message?.includes('session expired')) {
+          logout();
+          navigate('/login');
+        }
+      } finally {
+        setLikedProjectsLoading(false);
+      }
+    };
+
     fetchGithubData();
     fetchContributionsData();
     fetchUserProjects();
-  }, [user, navigate, getAuthToken, logout]);
+    fetchLikedProjects();
+  }, [user, navigate, getAuthToken, logout, refreshLikes]);
 
   const handleDeleteProject = async (projectId: string) => {
     if (!user) return;
@@ -260,11 +346,20 @@ export function ProfilePage() {
                     <div className="relative overflow-hidden bg-white/5 rounded-lg p-6 transition-all duration-300 hover:bg-white/10 group">
                       <div className="relative z-10">
                         <div className="text-3xl font-bold text-white group-hover:text-[#0066FF] transition-colors duration-300">
-                          {userProjects.length}/{projectLimits.total}
+                          {userProjects.length}/{projectLimits.total || 5}
                         </div>
                         <div className="text-sm text-white/60">Projects Uploaded</div>
                       </div>
                       <GitForkIcon className="absolute -right-4 -bottom-4 w-20 h-20 text-white/5 group-hover:text-[#0066FF]/5 transition-colors duration-300" />
+                    </div>
+                    <div className="relative overflow-hidden bg-white/5 rounded-lg p-6 transition-all duration-300 hover:bg-white/10 group">
+                      <div className="relative z-10">
+                        <div className="text-3xl font-bold text-white group-hover:text-[#0066FF] transition-colors duration-300">
+                          {likedProjects.length}
+                        </div>
+                        <div className="text-sm text-white/60">Liked Projects</div>
+                      </div>
+                      <Heart className="absolute -right-4 -bottom-4 w-20 h-20 text-white/5 group-hover:text-[#0066FF]/5 transition-colors duration-300" />
                     </div>
                     <div className="relative overflow-hidden bg-white/5 rounded-lg p-6 transition-all duration-300 hover:bg-white/10 group">
                       <div className="relative z-10">
@@ -274,15 +369,6 @@ export function ProfilePage() {
                         <div className="text-sm text-white/60">Contributions</div>
                       </div>
                       <GitPullRequestIcon className="absolute -right-4 -bottom-4 w-20 h-20 text-white/5 group-hover:text-[#0066FF]/5 transition-colors duration-300" />
-                    </div>
-                    <div className="relative overflow-hidden bg-white/5 rounded-lg p-6 transition-all duration-300 hover:bg-white/10 group">
-                      <div className="relative z-10">
-                        <div className="text-sm text-white/60">Last Active</div>
-                        <div className="text-white mt-1 text-lg">
-                          {new Date().toLocaleDateString()}
-                        </div>
-                      </div>
-                      <BookIcon className="absolute -right-4 -bottom-4 w-20 h-20 text-white/5 group-hover:text-white/10 transition-colors duration-300" />
                     </div>
                   </div>
 
@@ -349,6 +435,9 @@ export function ProfilePage() {
                               secondaryTextColor="text-white/60"
                               hoverScale="hover:scale-[1.02] transition-all duration-300"
                               iconSize={4}
+                              projectId={project._id}
+                              initialLikeCount={project.likeCount || 0}
+                              initialLiked={project.liked || false}
                             />
                           </div>
                         ))
@@ -360,6 +449,68 @@ export function ProfilePage() {
                             className="text-[#0066FF] hover:underline"
                           >
                             Add your first project
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Liked Projects Section */}
+                  <div className="space-y-4 mt-8">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-[#0066FF]/10 p-2 rounded-lg">
+                          <Heart className="text-[#0066FF] w-5 h-5" />
+                        </div>
+                        <h3 className="text-xl font-bold text-white">Liked Projects</h3>
+                      </div>
+                      <Button
+                        className="bg-[#0066FF] text-white hover:bg-[#0066FF]/90 transition-all duration-300 hover:scale-[1.02]"
+                        onClick={() => navigate('/projects')}
+                      >
+                        Explore More Projects
+                      </Button>
+                    </div>
+                    
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {likedProjectsLoading ? (
+                        Array(3).fill(null).map((_, i) => (
+                          <div key={i} className="relative">
+                            <div className="w-full h-[200px] rounded-[15px] bg-white/5 animate-pulse">
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <Loader2 className="w-6 h-6 text-white/40 animate-spin" />
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      ) : likedProjects.length > 0 ? (
+                        likedProjects.map((project) => (
+                          <div key={project._id} className="relative">
+                            <ProjectCard
+                              publicRepoUrl={project.repositoryUrl}
+                              className="w-full"
+                              cardClassName="bg-black/40 hover:bg-black/50 border-white/20 backdrop-blur-md"
+                              titleClassName="text-2xl font-bold"
+                              descriptionClassName="text-sm"
+                              statsClassName="grid-cols-2 gap-2"
+                              languageBarClassName="scale-90 origin-left"
+                              secondaryTextColor="text-white/60"
+                              hoverScale="hover:scale-[1.02] transition-all duration-300"
+                              iconSize={4}
+                              projectId={project._id}
+                              initialLikeCount={project.likeCount || 0}
+                              initialLiked={true}
+                            />
+                          </div>
+                        ))
+                      ) : (
+                        <div className="col-span-3 text-center py-8 text-white/60">
+                          No liked projects yet.{' '}
+                          <button
+                            onClick={() => navigate('/projects')}
+                            className="text-[#0066FF] hover:underline"
+                          >
+                            Explore projects to like
                           </button>
                         </div>
                       )}

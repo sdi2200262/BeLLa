@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const { AUTH_CONFIG } = require('../config/config');
+const logger = require('../services/logService');
 
 /**
  * User Schema
@@ -113,7 +115,7 @@ userSchema.methods = {
         { new: true, select: 'lastLogin' }
       );
     } catch (error) {
-      console.error('Failed to update last login:', error);
+      logger.error('Failed to update last login:', error);
     }
   }
 };
@@ -158,10 +160,10 @@ const createIndexes = async () => {
       User.collection.createIndex({ email: 1, isActive: 1 }),
       User.collection.createIndex({ githubId: 1, isActive: 1 }, { sparse: true })
     ]);
-    console.log('User indexes created successfully');
+    logger.info('User indexes created successfully');
   } catch (error) {
     // Log error but don't throw - allow application to continue
-    console.error('Error managing user indexes:', error);
+    logger.error('Error managing user indexes:', error);
   }
 };
 

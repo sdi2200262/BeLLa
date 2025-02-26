@@ -1,29 +1,22 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/auth');
+const { authenticate } = require('../middleware/auth');
 const projectController = require('../controllers/projectController');
+const { authLimiter } = require('../middleware/rateLimiter');
+const { validateBody, validateQuery, schemas } = require('../middleware/validator');
 
 /**
  * Project Routes
- * All routes require authentication
  */
 
-// Get all projects
-router.get('/', projectController.getAllProjects);
+// Public routes
+router.get('/', validateQuery(schemas.project.query), projectController.getAllProjects);
+router.get('/data', validateQuery(schemas.project.query), projectController.getProjectData);
+router.get('/tree', validateQuery(schemas.project.query), projectController.getFileTree);
 
-// Get user's projects
-router.get('/user', auth, projectController.getUserProjects);
-
-// Get project data
-router.get('/data', projectController.getProjectData);
-
-// Get file tree
-router.get('/tree', projectController.getFileTree);
-
-// Add project (auth required)
-router.post('/', auth, projectController.addProject);
-
-// Archive project (auth required)
-router.delete('/:id', auth, projectController.deleteProject);
+// Protected routes
+router.get('/user', authenticate, validateQuery(schemas.project.query), projectController.getUserProjects);
+router.post('/', authenticate, authLimiter, validateBody(schemas.project.create), projectController.addProject);
+router.delete('/:id', authenticate, projectController.deleteProject);
 
 module.exports = router; 

@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { Card } from "../ui/card";
 import { GithubIcon } from "lucide-react";
 import { API_BASE_URL, defaultFetchOptions, handleResponse, APIError } from "@/config/api";
+import { useLikes } from '@/contexts/LikeContext';
 
 interface Project {
   _id: string;
@@ -18,6 +19,8 @@ interface Project {
   uploadedBy: string;
   createdAt: string;
   status: string;
+  likeCount?: number;
+  liked?: boolean;
 }
 
 interface ProjectsResponse {
@@ -51,6 +54,7 @@ interface RepoSuggestion {
 
 export function ProjectsPage() {
   const { user, logout, getAuthToken } = useAuth();
+  const { refreshLikes } = useLikes();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("bella");
   const [userProjects, setUserProjects] = useState<Project[]>([]);
@@ -89,7 +93,50 @@ export function ProjectsPage() {
       });
 
       const data = await handleResponse<PaginatedResponse>(response);
-      setUserProjects(data.projects || []);
+      const projects = data.projects || [];
+      
+      // If user is logged in, fetch like status for each project
+      if (user && projects.length > 0) {
+        try {
+          // Filter out any invalid project IDs (must be 24 hex characters)
+          const projectIds = projects
+            .map(p => p._id)
+            .filter(id => {
+              const isValid = id && /^[0-9a-fA-F]{24}$/.test(id);
+              if (!isValid) {
+                console.warn(`Skipping invalid project ID in user projects: ${id}`);
+              }
+              return isValid;
+            });
+          
+          // Only fetch likes if we have valid project IDs
+          if (projectIds.length > 0) {
+            // Use a debounce mechanism to prevent excessive refreshes
+            const refreshKey = projectIds.sort().join(',');
+            const now = Date.now();
+            const lastRefresh = (window as any)._projectsPageLikeRefreshTime || 0;
+            
+            if (now - lastRefresh > 5000) { // Only refresh if it's been more than 5 seconds
+              (window as any)._projectsPageLikeRefreshTime = now;
+              
+              // Use the refreshLikes function from LikeContext
+              await refreshLikes(projectIds);
+            } else {
+              console.log('Skipping projects page likes refresh - too soon since last refresh');
+            }
+          }
+          
+          // Always set the projects, even if we couldn't refresh likes
+          setUserProjects(projects);
+        } catch (error) {
+          console.error('Error fetching like data:', error);
+          // Continue with projects without like data
+          setUserProjects(projects);
+        }
+      } else {
+        setUserProjects(projects);
+      }
+      
       setTotalPages(data.pagination?.pages || 1);
       setTotalProjects(data.pagination?.total || 0);
       
@@ -100,6 +147,9 @@ export function ProjectsPage() {
           remaining: data.limits.projectsPerUser - (data.projects?.length || 0)
         });
       }
+      
+      // Mark that we've done the initial fetch
+      setHasInitialFetch(true);
     } catch (error: any) {
       console.error('Error fetching projects:', error);
       setError(error.message || 'Failed to fetch projects');
@@ -113,9 +163,11 @@ export function ProjectsPage() {
     }
   };
 
-  // Fetch projects on mount
+  // Fetch projects on mount - but only once
   useEffect(() => {
-    fetchUserProjects();
+    if (!hasInitialFetch) {
+      fetchUserProjects();
+    }
   }, []);
 
   // Re-fetch when tab changes
@@ -132,7 +184,7 @@ export function ProjectsPage() {
 
   // Re-fetch when search query changes
   useEffect(() => {
-    if (activeTab === 'user' && searchQuery) {
+    if (activeTab === 'user' && searchQuery && hasInitialFetch) {
       fetchUserProjects();
     }
   }, [searchQuery]);
@@ -504,6 +556,9 @@ export function ProjectsPage() {
                       secondaryTextColor="text-white/60"
                       hoverScale="hover:scale-[1.02] transition-all duration-300"
                       iconSize={4}
+                      projectId={project._id}
+                      initialLikeCount={project.likeCount || 0}
+                      initialLiked={project.liked || false}
                     />
                   </div>
                 ))
