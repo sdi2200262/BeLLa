@@ -1,79 +1,95 @@
-/**
- * Authentication Middleware
- * Handles token verification and user authentication
- */
-
 const jwt = require('jsonwebtoken');
-const cacheService = require('../services/cacheService');
-const { AUTH_CONFIG } = require('../config/config');
-const { ApiError } = require('./errorHandler');
+const NodeCache = require('node-cache');
+
+/**
+ * Token verification cache to reduce JWT decoding overhead
+ * Optimized for Render free tier memory constraints
+ */
+const tokenCache = new NodeCache({
+  stdTTL: 600,         // 10 minutes (increased from 5)
+  checkperiod: 120,    // Check every 2 minutes (reduced frequency)
+  maxKeys: 500,        // Reduced from 1000 to save memory
+  useClones: false     // Don't clone objects (saves memory)
+});
+
+// Track cache stats for monitoring
+let cacheHits = 0;
+let cacheMisses = 0;
 
 /**
  * Authentication middleware
- * Verifies JWT tokens from cookies or Authorization header
+ * Optimized for Render free tier with minimal memory usage
  */
-const authenticate = async (req, res, next) => {
+const auth = async (req, res, next) => {
   try {
     // Get token from header or cookie
-    const token = req.cookies.token || req.header('Authorization')?.replace('Bearer ', '');
+    const token = req.cookies?.token || req.header('Authorization')?.replace('Bearer ', '');
     
     if (!token) {
-      return next(ApiError.unauthorized('Authentication required'));
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
-    // Check cache first
-    const cachedUser = cacheService.get('token', token);
+    // Check cache first (memory efficient)
+    const cachedUser = tokenCache.get(token);
     if (cachedUser) {
+      cacheHits++;
+      
+      // Log cache stats every 100 hits
+      if (cacheHits % 100 === 0) {
+        const hitRatio = cacheHits / (cacheHits + cacheMisses);
+        console.log(`Auth cache stats - Hits: ${cacheHits}, Misses: ${cacheMisses}, Ratio: ${(hitRatio * 100).toFixed(2)}%`);
+      }
+      
       req.user = cachedUser;
       return next();
     }
+    
+    cacheMisses++;
 
     // Verify token if not in cache
     try {
-      const decoded = jwt.verify(token, AUTH_CONFIG.JWT_SECRET);
+      // Use non-async verification to reduce overhead
+      const decoded = jwt.verify(token, process.env.JWT_SECRET, {
+        algorithms: ['HS256'], // Explicitly specify algorithm for security
+        maxAge: '2h'          // Additional validation
+      });
+      
+      // Only cache essential user data
+      const minimalUserData = {
+        id: decoded.id,
+        username: decoded.username
+      };
       
       // Cache successful verifications
-      cacheService.set('token', token, decoded);
-      req.user = decoded;
+      tokenCache.set(token, minimalUserData);
+      req.user = minimalUserData;
       next();
     } catch (error) {
       // Clear token on verification failure
       res.clearCookie('token');
       
       if (error.name === 'TokenExpiredError') {
-        return next(ApiError.unauthorized('Session expired', 'Please log in again'));
+        return res.status(401).json({ 
+          error: 'Session expired'
+        });
       }
       
-      return next(ApiError.unauthorized('Invalid token', 'Authentication failed'));
+      return res.status(401).json({ 
+        error: 'Authentication failed'
+      });
     }
   } catch (error) {
-    // Clear cache on error
-    cacheService.flush('token');
-    next(ApiError.internal('Authentication error'));
+    console.error('Auth middleware error:', error);
+    
+    // Only flush cache on critical errors
+    if (error.name === 'JsonWebTokenError') {
+      tokenCache.flushAll();
+      console.warn('Auth cache flushed due to JWT error');
+    }
+    
+    res.status(500).json({ error: 'Authentication error' });
   }
 };
 
-/**
- * Role-based authorization middleware
- * @param {string[]} roles - Array of allowed roles
- */
-const authorize = (roles = []) => {
-  return (req, res, next) => {
-    if (!req.user) {
-      return next(ApiError.unauthorized('Authentication required'));
-    }
-
-    if (roles.length && !roles.includes(req.user.role)) {
-      return next(ApiError.forbidden('Insufficient permissions'));
-    }
-
-    next();
-  };
-};
-
-// Export both names for backward compatibility
-module.exports = {
-  auth: authenticate, // For backward compatibility
-  authenticate,
-  authorize
-}; 
+// Export middleware
+module.exports = auth; 
