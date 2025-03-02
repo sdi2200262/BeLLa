@@ -1,17 +1,11 @@
 const axios = require('axios');
-const NodeCache = require('node-cache');
 const PQueue = require('p-queue').default;
+const cacheService = require('./cacheService');
 
 /**
  * Configuration
  */
 const CONFIG = {
-  CACHE: {
-    TTL: 1800,          // 30 minutes
-    CLEANUP: 300,       // 5 minutes
-    MAX_SIZE: 500000,   // 500KB max response size
-    MAX_KEYS: 1000      // Maximum cached responses
-  },
   RATE_LIMIT: {
     WARNING: 4000,      // Warn at 4000 requests (80% of limit)
     RESET: 3600000,     // Reset counter every hour
@@ -26,18 +20,10 @@ const CONFIG = {
 
 /**
  * GitHub API Service
- * Optimized for free tier with advanced rate limiting
+ * Optimized with caching and rate limiting
  */
 class GitHubService {
   constructor() {
-    // Initialize caching
-    this.cache = new NodeCache({ 
-      stdTTL: CONFIG.CACHE.TTL,
-      checkperiod: CONFIG.CACHE.CLEANUP,
-      maxKeys: CONFIG.CACHE.MAX_KEYS,
-      useClones: false
-    });
-
     // Initialize request queue
     this.queue = new PQueue({ 
       concurrency: CONFIG.QUEUE.CONCURRENCY,
@@ -54,30 +40,18 @@ class GitHubService {
       this.apiCalls = 0;
       this.lastReset = Date.now();
     }, CONFIG.RATE_LIMIT.RESET);
-
-    // Periodic cache cleanup
-    setInterval(() => {
-      const keys = this.cache.keys();
-      keys.forEach(key => {
-        const value = this.cache.get(key);
-        if (value) {
-          const size = Buffer.byteLength(JSON.stringify(value));
-          if (size > CONFIG.CACHE.MAX_SIZE) {
-            console.warn(`Removing oversized cache entry: ${key} (${size} bytes)`);
-            this.cache.del(key);
-          }
-        }
-      });
-    }, CONFIG.CACHE.CLEANUP * 1000);
   }
 
   /**
    * Core API request method with retries and rate limiting
    */
   async makeRequest(endpoint, options = {}) {
-    const cacheKey = `github:${endpoint}${JSON.stringify(options)}`;
-    const cached = this.cache.get(cacheKey);
-    if (cached) return cached;
+    // Check cache first
+    const cacheKey = `github:${endpoint}:${JSON.stringify(options)}`;
+    const cachedResponse = cacheService.getRepoData(cacheKey);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
 
     // Check rate limits
     if (this.rateLimitRemaining < CONFIG.RATE_LIMIT.MIN_REMAINING) {
@@ -101,14 +75,9 @@ class GitHubService {
         this.rateLimitRemaining = parseInt(response.headers['x-ratelimit-remaining'] || this.rateLimitRemaining);
         this.apiCalls++;
 
-        // Cache successful responses if not too large
-        if (response.status === 200) {
-          const dataSize = Buffer.byteLength(JSON.stringify(response.data));
-          if (dataSize < CONFIG.CACHE.MAX_SIZE) {
-            this.cache.set(cacheKey, response.data);
-          }
-        }
-
+        // Cache successful response
+        cacheService.setRepoData(cacheKey, response.data);
+        
         return response.data;
       } catch (error) {
         retries++;
@@ -181,43 +150,154 @@ class GitHubService {
   }
 
   /**
-   * Public API Methods
+   * Get repository data with caching
    */
-  async getRepository(owner, repo) {
-    return this.makeRequest(`/repos/${owner}/${repo}`);
-  }
-
   async getRepositoryData(url) {
+    // Check cache first
+    const cachedData = cacheService.getRepoData(url);
+    if (cachedData) {
+      return {
+        data: cachedData,
+        cached: true,
+        cacheExpiry: Date.now() + 1800000 // 30 minutes
+      };
+    }
+
+    // Parse URL
     const { owner, repo } = this.parseRepoUrl(url);
     
     try {
+      // Fetch data from GitHub API
       const [repoData, languages] = await Promise.all([
         this.makeRequest(`/repos/${owner}/${repo}`),
         this.makeRequest(`/repos/${owner}/${repo}/languages`)
       ]);
 
-      return {
+      // Get commit count
+      let commitCount = 0;
+      try {
+        const commitsResponse = await axios({
+          url: `https://api.github.com/repos/${owner}/${repo}/commits`,
+          headers: {
+            'Authorization': `Bearer ${process.env.GITHUB_TOKEN}`,
+            'Accept': 'application/vnd.github.v3+json'
+          },
+          params: { per_page: 1 }
+        });
+
+        // Get total commit count from Link header
+        const linkHeader = commitsResponse.headers.link;
+        if (linkHeader) {
+          const matches = linkHeader.match(/page=(\d+)>; rel="last"/);
+          if (matches) {
+            commitCount = parseInt(matches[1], 10);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching commit count:', error);
+      }
+
+      // Combine data
+      const data = {
         ...repoData,
-        languages
+        languages,
+        commit_count: commitCount
+      };
+
+      // Cache the data
+      cacheService.setRepoData(url, data);
+
+      return {
+        data,
+        cached: false
       };
     } catch (error) {
-      throw new Error('Failed to fetch repository data');
+      throw new Error('Failed to fetch repository data: ' + error.message);
     }
   }
 
+  /**
+   * Get file tree with caching
+   */
   async getFileTree(url) {
+    // Check cache first
+    const cacheKey = `${url}:tree`;
+    const cachedTree = cacheService.getRepoData(cacheKey);
+    if (cachedTree) {
+      return {
+        tree: cachedTree,
+        cached: true,
+        cacheExpiry: Date.now() + 1800000 // 30 minutes
+      };
+    }
+
+    // Parse URL
     const { owner, repo } = this.parseRepoUrl(url);
     
     try {
+      // Get default branch
       const repoData = await this.makeRequest(`/repos/${owner}/${repo}`);
+      
+      // Get tree
       const tree = await this.makeRequest(
         `/repos/${owner}/${repo}/git/trees/${repoData.default_branch}`,
         { params: { recursive: 1 } }
       );
 
-      return this.processFileTree(tree.tree, repo);
+      // Process tree
+      const processedTree = this.processFileTree(tree.tree, repo);
+      
+      // Cache the tree
+      cacheService.setRepoData(cacheKey, processedTree);
+
+      return {
+        tree: processedTree,
+        cached: false
+      };
     } catch (error) {
-      throw new Error('Failed to fetch repository structure');
+      throw new Error('Failed to fetch repository structure: ' + error.message);
+    }
+  }
+
+  /**
+   * Get file content with caching
+   */
+  async getFileContent(url, path) {
+    // Check cache first
+    const cachedContent = cacheService.getFileContent(url, path);
+    if (cachedContent) {
+      return {
+        content: cachedContent,
+        cached: true,
+        cacheExpiry: Date.now() + 3600000 // 1 hour
+      };
+    }
+
+    // Parse URL
+    const { owner, repo } = this.parseRepoUrl(url);
+    
+    try {
+      // Get file content
+      const response = await this.makeRequest(
+        `/repos/${owner}/${repo}/contents/${path}`
+      );
+
+      let content = '';
+      if (response.encoding === 'base64') {
+        content = Buffer.from(response.content, 'base64').toString('utf-8');
+      } else {
+        content = response.content;
+      }
+
+      // Cache the content
+      cacheService.setFileContent(url, path, content);
+
+      return {
+        content,
+        cached: false
+      };
+    } catch (error) {
+      throw new Error('Failed to fetch file content: ' + error.message);
     }
   }
 

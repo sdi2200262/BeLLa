@@ -1,92 +1,39 @@
 const Project = require('../models/Project');
 const githubService = require('../services/githubService');
-const NodeCache = require('node-cache');
-const { Octokit } = require('octokit');
-
-/**
- * Cache Configuration
- */
-const CACHE_CONFIG = {
-  PROJECTS: {
-    TTL: 300,          // 5 minutes for project lists
-    MAX_KEYS: 100,     // Limit total cached pages
-    MAX_SIZE: 100000   // 100KB per cached page
-  },
-  PROJECT_DATA: {
-    TTL: 1800,         // 30 minutes for project data
-    MAX_KEYS: 200,     // Limit cached project details
-    MAX_SIZE: 250000   // 250KB per project data
-  }
-};
+const cacheService = require('../services/cacheService');
 
 /**
  * Resource Limits
  */
 const LIMITS = {
-  PROJECTS_PER_USER: 5,    // Max active projects per user
   PAGE_SIZE: 9,           // Projects per page
   MAX_SEARCH_LENGTH: 50,  // Max search query length
   MAX_TREE_DEPTH: 5,      // Max file tree depth
-  MAX_FILES: 500,        // Max files in response
-  CACHE_CLEANUP_INTERVAL: 600000 // Clean cache every 10 minutes
+  MAX_FILES: 500         // Max files in response
 };
-
-// Initialize caches with size limits
-const projectCache = new NodeCache({
-  stdTTL: CACHE_CONFIG.PROJECTS.TTL,
-  maxKeys: CACHE_CONFIG.PROJECTS.MAX_KEYS,
-  checkperiod: 60,
-  useClones: false
-});
-
-const projectDataCache = new NodeCache({
-  stdTTL: CACHE_CONFIG.PROJECT_DATA.TTL,
-  maxKeys: CACHE_CONFIG.PROJECT_DATA.MAX_KEYS,
-  checkperiod: 120,
-  useClones: false
-});
-
-// Periodic cache size check and cleanup
-setInterval(() => {
-  [
-    { cache: projectCache, config: CACHE_CONFIG.PROJECTS },
-    { cache: projectDataCache, config: CACHE_CONFIG.PROJECT_DATA }
-  ].forEach(({ cache, config }) => {
-    const keys = cache.keys();
-    keys.forEach(key => {
-      const value = cache.get(key);
-      const size = Buffer.byteLength(JSON.stringify(value));
-      if (size > config.MAX_SIZE) {
-        console.warn(`Removing oversized cache entry: ${key} (${size} bytes)`);
-        cache.del(key);
-      }
-    });
-  });
-}, LIMITS.CACHE_CLEANUP_INTERVAL);
 
 /**
  * Project Controller
- * Optimized for free tier with caching and resource limits
+ * Simplified to work with minimal Project model and centralized caching
  */
 const projectController = {
-  // Get all projects with caching and size limits
+  // Get all projects
   async getAllProjects(req, res) {
     try {
       const page = Math.max(1, parseInt(req.query.page) || 1);
       const search = (req.query.search || '').slice(0, LIMITS.MAX_SEARCH_LENGTH);
       
       const cacheKey = `projects:${page}:${search}`;
-      const cached = projectCache.get(cacheKey);
+      const cached = cacheService.getRepoData(cacheKey);
       if (cached) {
         return res.json({
           ...cached,
-          cached: true,
-          cacheExpiry: projectCache.getTtl(cacheKey)
+          cached: true
         });
       }
 
-      // Include both active and error status projects
-      const query = { status: { $in: ['active', 'error'] } };
+      // Build query
+      const query = {};
       if (search) {
         query.repositoryUrl = { $regex: search, $options: 'i' };
       }
@@ -94,38 +41,56 @@ const projectController = {
       const [totalProjects, projects] = await Promise.all([
         Project.countDocuments(query),
         Project.find(query)
-          .select('repositoryUrl uploadedBy metadata.language metadata.stars createdAt status')
+          .select('repositoryUrl githubUsername createdAt')
           .lean()
           .sort({ createdAt: -1 })
           .skip((page - 1) * LIMITS.PAGE_SIZE)
           .limit(LIMITS.PAGE_SIZE)
       ]);
 
+      // Enhance projects with GitHub data if available
+      const enhancedProjects = await Promise.all(
+        projects.map(async (project) => {
+          try {
+            // Check if we have cached GitHub data
+            const repoData = cacheService.getRepoData(project.repositoryUrl);
+            if (repoData) {
+              return {
+                ...project,
+                githubData: {
+                  name: repoData.name,
+                  description: repoData.description,
+                  stars: repoData.stargazers_count,
+                  language: Object.keys(repoData.languages || {})[0] || null
+                }
+              };
+            }
+            return project;
+          } catch (error) {
+            return project;
+          }
+        })
+      );
+
       const response = {
-        projects,
+        projects: enhancedProjects,
         pagination: {
           total: totalProjects,
           pages: Math.ceil(totalProjects / LIMITS.PAGE_SIZE),
           current: page,
           hasMore: page * LIMITS.PAGE_SIZE < totalProjects
-        },
-        limits: {
-          projectsPerUser: LIMITS.PROJECTS_PER_USER,
-          cacheTime: CACHE_CONFIG.PROJECTS.TTL
         }
       };
 
-      // Check response size before caching
-      const responseSize = Buffer.byteLength(JSON.stringify(response));
-      if (responseSize <= CACHE_CONFIG.PROJECTS.MAX_SIZE) {
-        projectCache.set(cacheKey, response);
-      }
+      // Cache the response
+      cacheService.setRepoData(cacheKey, response, 300); // 5 minutes
 
       res.json({
         ...response,
         cached: false
       });
     } catch (error) {
+      console.error('Error fetching projects:', error);
       res.status(500).json({ error: 'Failed to fetch projects' });
     }
   },
@@ -133,47 +98,88 @@ const projectController = {
   // Get user's projects
   async getUserProjects(req, res) {
     try {
-      const userId = req.user.id;
-      const cacheKey = `user-projects:${userId}`;
+      // Get GitHub username from query, token, or from GitHub API
+      let githubUsername = req.query.githubUsername || req.user?.githubUsername;
       
-      // Check cache
-      const cached = projectCache.get(cacheKey);
+      if (!githubUsername && req.user && req.user.githubId) {
+        // Try to get username from cache
+        const userData = cacheService.getUserData(`github_user:${req.user.githubId}`);
+        if (userData && userData.login) {
+          githubUsername = userData.login;
+        } else {
+          // Fetch from GitHub API
+          const tokenData = cacheService.getUserData(`github_token:${req.user.githubId}`);
+          if (tokenData && tokenData.access_token) {
+            try {
+              const response = await fetch('https://api.github.com/user', {
+                headers: {
+                  'Authorization': `Bearer ${tokenData.access_token}`,
+                  'Accept': 'application/json'
+                }
+              });
+              
+              if (response.ok) {
+                const userData = await response.json();
+                githubUsername = userData.login;
+                // Cache the user data
+                cacheService.setUserData(`github_user:${req.user.githubId}`, userData, 3600);
+              }
+            } catch (error) {
+              console.error('Error fetching GitHub user data:', error);
+            }
+          }
+        }
+      }
+      
+      if (!githubUsername) {
+        return res.status(400).json({ error: 'GitHub username is required' });
+      }
+      
+      const cacheKey = `user-projects:${githubUsername}`;
+      const cached = cacheService.getRepoData(cacheKey);
       if (cached) {
         return res.json({
           ...cached,
-          cached: true,
-          cacheExpiry: projectCache.getTtl(cacheKey)
+          cached: true
         });
       }
 
-      // Get user's active projects
-      const projects = await Project.find({ 
-        userId, 
-        status: { $ne: 'archived' } 
-      })
-      .select('repositoryUrl uploadedBy status createdAt')
-      .sort({ createdAt: -1 })
-      .lean();
+      // Get user's projects
+      const projects = await Project.find({ githubUsername })
+        .select('repositoryUrl githubUsername createdAt')
+        .sort({ createdAt: -1 })
+        .lean();
 
-      // Get project limits
-      const totalActive = await Project.countDocuments({
-        userId,
-        status: { $ne: 'archived' }
-      });
+      // Enhance projects with GitHub data if available
+      const enhancedProjects = await Promise.all(
+        projects.map(async (project) => {
+          try {
+            // Check if we have cached GitHub data
+            const repoData = cacheService.getRepoData(project.repositoryUrl);
+            if (repoData) {
+              return {
+                ...project,
+                githubData: {
+                  name: repoData.name,
+                  description: repoData.description,
+                  stars: repoData.stargazers_count,
+                  language: Object.keys(repoData.languages || {})[0] || null
+                }
+              };
+            }
+            return project;
+          } catch (error) {
+            return project;
+          }
+        })
+      );
 
       const response = {
-        projects,
-        limits: {
-          projectsPerUser: LIMITS.PROJECTS_PER_USER,
-          remaining: Math.max(0, LIMITS.PROJECTS_PER_USER - totalActive)
-        }
+        projects: enhancedProjects
       };
 
       // Cache the response
-      const responseSize = Buffer.byteLength(JSON.stringify(response));
-      if (responseSize <= CACHE_CONFIG.PROJECTS.MAX_SIZE) {
-        projectCache.set(cacheKey, response);
-      }
+      cacheService.setRepoData(cacheKey, response, 300); // 5 minutes
 
       res.json({
         ...response,
@@ -193,222 +199,280 @@ const projectController = {
     }
 
     try {
-      // Extract owner and repo from URL
-      const match = url.match(/github\.com\/([^\/]+)\/([^\/\s]+)/);
-      if (!match) {
-        return res.status(400).json({ error: 'Invalid GitHub repository URL' });
+      // Use our githubService to get repository data
+      const result = await githubService.getRepositoryData(url);
+      
+      // Update lastChecked in the database if this is a tracked project
+      try {
+        await Project.findOneAndUpdate(
+          { repositoryUrl: url },
+          { lastChecked: new Date() }
+        );
+      } catch (dbError) {
+        console.error('Error updating lastChecked:', dbError);
       }
-
-      const [_, owner, repo] = match;
-      const cacheKey = `repo-data:${owner}/${repo}`;
-
-      // Check cache first
-      const cachedData = projectDataCache.get(cacheKey);
-      if (cachedData) {
-        return res.json({
-          cached: true,
-          cacheExpiry: cachedData.expiry,
-          data: cachedData.data
-        });
-      }
-
-      // Fetch repository data from GitHub
-      const octokit = new Octokit({
-        auth: process.env.GITHUB_TOKEN
-      });
-
-      // Fetch basic repo data
-      const repoResponse = await octokit.request('GET /repos/{owner}/{repo}', {
-        owner,
-        repo,
-        headers: {
-          'X-GitHub-Api-Version': '2022-11-28'
-        }
-      });
-
-      // Fetch languages
-      const languagesResponse = await octokit.request('GET /repos/{owner}/{repo}/languages', {
-        owner,
-        repo,
-        headers: {
-          'X-GitHub-Api-Version': '2022-11-28'
-        }
-      });
-
-      // Fetch commit count using pagination
-      const commitsResponse = await octokit.request('GET /repos/{owner}/{repo}/commits', {
-        owner,
-        repo,
-        per_page: 1,
-        headers: {
-          'X-GitHub-Api-Version': '2022-11-28'
-        }
-      });
-
-      // Get total commit count from Link header
-      let commitCount = 0;
-      const linkHeader = commitsResponse.headers.link;
-      if (linkHeader) {
-        const matches = linkHeader.match(/page=(\d+)>; rel="last"/);
-        if (matches) {
-          commitCount = parseInt(matches[1], 10);
-        }
-      }
-
-      const data = {
-        ...repoResponse.data,
-        languages: languagesResponse.data,
-        commit_count: commitCount,
-        forks_count: repoResponse.data.forks_count || 0
-      };
-
-      // Cache the result for 1 hour
-      projectDataCache.set(cacheKey, {
-        data,
-        expiry: Date.now() + 3600000 // 1 hour
-      });
-
-      res.json({
-        cached: false,
-        data
-      });
+      
+      res.json(result);
     } catch (error) {
-      console.error('Error fetching repository data:', error);
-      res.status(error.status || 500).json({ 
-        error: error.message || 'Failed to fetch repository data'
-      });
+      console.error('Error fetching project data:', error);
+      res.status(500).json({ error: 'Failed to fetch repository data: ' + error.message });
     }
   },
 
-  // Add project with resource limits
+  // Add a new project
   async addProject(req, res) {
     try {
-      const { repositoryUrl } = req.body;
-      if (!repositoryUrl) {
-        return res.status(400).json({ error: 'Repository URL required' });
+      const { url } = req.body;
+      
+      if (!url) {
+        return res.status(400).json({ error: 'Repository URL is required' });
+      }
+      
+      if (!req.user) {
+        return res.status(401).json({ error: 'Authentication required' });
       }
 
-      // Check user's project limit
-      const userProjectCount = await Project.countDocuments({
-        userId: req.user.id,
-        status: { $ne: 'archived' }
-      });
-
-      if (userProjectCount >= LIMITS.PROJECTS_PER_USER) {
-        return res.status(403).json({
-          error: 'Project limit reached',
-          message: `Free tier allows ${LIMITS.PROJECTS_PER_USER} active projects per user. Please archive old projects first.`,
-          current: userProjectCount,
-          limit: LIMITS.PROJECTS_PER_USER
-        });
+      // Get GitHub username from token or from GitHub API
+      let githubUsername = req.user.githubUsername;
+      
+      if (!githubUsername && req.user.githubId) {
+        // Try to get username from cache
+        const userData = cacheService.getUserData(`github_user:${req.user.githubId}`);
+        if (userData && userData.login) {
+          githubUsername = userData.login;
+        } else {
+          // Fetch from GitHub API
+          const tokenData = cacheService.getUserData(`github_token:${req.user.githubId}`);
+          if (tokenData && tokenData.access_token) {
+            try {
+              const response = await fetch('https://api.github.com/user', {
+                headers: {
+                  'Authorization': `Bearer ${tokenData.access_token}`,
+                  'Accept': 'application/json'
+                }
+              });
+              
+              if (response.ok) {
+                const userData = await response.json();
+                githubUsername = userData.login;
+                // Cache the user data
+                cacheService.setUserData(`github_user:${req.user.githubId}`, userData, 3600);
+              } else {
+                return res.status(400).json({ error: 'Failed to get GitHub username' });
+              }
+            } catch (error) {
+              console.error('Error fetching GitHub user data:', error);
+              return res.status(500).json({ error: 'Failed to get GitHub username' });
+            }
+          } else {
+            return res.status(400).json({ error: 'GitHub token not found' });
+          }
+        }
+      }
+      
+      if (!githubUsername) {
+        return res.status(400).json({ error: 'GitHub username is required' });
       }
 
-      // Check for duplicate
-      const existing = await Project.findOne({
-        repositoryUrl: { $regex: new RegExp('^' + repositoryUrl + '$', 'i') }
-      });
+      // Validate GitHub URL
+      try {
+        githubService.parseRepoUrl(url);
+      } catch (error) {
+        return res.status(400).json({ error: error.message });
+      }
 
-      if (existing) {
+      // Check if project already exists
+      const existingProject = await Project.findOne({ repositoryUrl: url });
+      if (existingProject) {
         return res.status(409).json({ error: 'Project already exists' });
       }
 
-      // Create project
+      // Create new project
       const project = await Project.create({
-        repositoryUrl,
-        userId: req.user.id,
-        uploadedBy: req.user.username
+        repositoryUrl: url,
+        githubUsername
       });
 
-      // Clear relevant caches
-      projectCache.flushAll();
+      // Fetch GitHub data in the background
+      githubService.getRepositoryData(url).catch(error => {
+        console.error('Error fetching initial repository data:', error);
+      });
 
+      // Clear user projects cache
+      cacheService.clearRepoCache(`user-projects:${githubUsername}`);
+      
       res.status(201).json({
+        message: 'Project added successfully',
         project: {
           id: project._id,
           repositoryUrl: project.repositoryUrl,
-          uploadedBy: project.uploadedBy
-        },
-        limits: {
-          projectsPerUser: LIMITS.PROJECTS_PER_USER,
-          remaining: LIMITS.PROJECTS_PER_USER - (userProjectCount + 1)
+          githubUsername: project.githubUsername,
+          createdAt: project.createdAt
         }
       });
     } catch (error) {
+      console.error('Error adding project:', error);
       res.status(500).json({ error: 'Failed to add project' });
     }
   },
 
-  // Archive project (soft delete)
+  // Delete a project
   async deleteProject(req, res) {
     try {
-      const project = await Project.findOneAndUpdate(
-        { _id: req.params.id, userId: req.user.id },
-        { status: 'archived' },
-        { new: true }
-      );
+      const { id } = req.params;
+      
+      if (!req.user) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
 
+      // Get GitHub username from token or from GitHub API
+      let githubUsername = req.user.githubUsername;
+      
+      if (!githubUsername && req.user.githubId) {
+        // Try to get username from cache
+        const userData = cacheService.getUserData(`github_user:${req.user.githubId}`);
+        if (userData && userData.login) {
+          githubUsername = userData.login;
+        } else {
+          // Fetch from GitHub API
+          const tokenData = cacheService.getUserData(`github_token:${req.user.githubId}`);
+          if (tokenData && tokenData.access_token) {
+            try {
+              const response = await fetch('https://api.github.com/user', {
+                headers: {
+                  'Authorization': `Bearer ${tokenData.access_token}`,
+                  'Accept': 'application/json'
+                }
+              });
+              
+              if (response.ok) {
+                const userData = await response.json();
+                githubUsername = userData.login;
+                // Cache the user data
+                cacheService.setUserData(`github_user:${req.user.githubId}`, userData, 3600);
+              } else {
+                return res.status(400).json({ error: 'Failed to get GitHub username' });
+              }
+            } catch (error) {
+              console.error('Error fetching GitHub user data:', error);
+              return res.status(500).json({ error: 'Failed to get GitHub username' });
+            }
+          } else {
+            return res.status(400).json({ error: 'GitHub token not found' });
+          }
+        }
+      }
+      
+      if (!githubUsername) {
+        return res.status(400).json({ error: 'GitHub username is required' });
+      }
+
+      // Find the project
+      const project = await Project.findById(id);
       if (!project) {
         return res.status(404).json({ error: 'Project not found' });
       }
 
-      // Clear relevant caches
-      projectCache.flushAll();
-      projectDataCache.del(`data:${project.repositoryUrl}`);
+      // Check if user owns the project
+      if (project.githubUsername !== githubUsername) {
+        return res.status(403).json({ error: 'Not authorized to delete this project' });
+      }
 
-      res.json({
-        message: 'Project archived successfully',
-        note: 'Archived projects don\'t count towards your limit'
-      });
+      // Hard delete the project
+      await Project.deleteOne({ _id: id });
+
+      // Clear caches
+      cacheService.clearRepoCache(project.repositoryUrl);
+      cacheService.clearRepoCache(`user-projects:${githubUsername}`);
+      
+      res.json({ message: 'Project deleted successfully' });
     } catch (error) {
-      res.status(500).json({ error: 'Failed to archive project' });
+      console.error('Error deleting project:', error);
+      res.status(500).json({ error: 'Failed to delete project' });
     }
   },
 
-  // Get file tree with depth and size limits
+  // Get file tree
   async getFileTree(req, res) {
+    const { url } = req.query;
+    if (!url) {
+      return res.status(400).json({ error: 'Repository URL is required' });
+    }
+
     try {
-      const { url } = req.query;
-      if (!url) {
-        return res.status(400).json({ error: 'Repository URL required' });
+      // Use our githubService to get file tree
+      const result = await githubService.getFileTree(url);
+      
+      // Limit tree depth for performance
+      if (result.tree && result.tree.children) {
+        result.tree = limitTreeDepth(result.tree, LIMITS.MAX_TREE_DEPTH, LIMITS.MAX_FILES);
       }
-
-      const tree = await githubService.getFileTree(url);
-      const limitedTree = limitTreeDepth(tree, LIMITS.MAX_TREE_DEPTH, LIMITS.MAX_FILES);
-
-      res.json({
-        tree: limitedTree,
-        limits: {
-          maxDepth: LIMITS.MAX_TREE_DEPTH,
-          maxFiles: LIMITS.MAX_FILES
-        }
-      });
+      
+      res.json(result);
     } catch (error) {
-      res.status(500).json({ error: 'Failed to fetch file tree' });
+      console.error('Error fetching file tree:', error);
+      res.status(500).json({ error: 'Failed to fetch repository structure: ' + error.message });
+    }
+  },
+  
+  // Get file content
+  async getFileContent(req, res) {
+    const { url, path } = req.query;
+    if (!url || !path) {
+      return res.status(400).json({ error: 'Repository URL and file path are required' });
+    }
+
+    try {
+      // Use our githubService to get file content
+      const result = await githubService.getFileContent(url, path);
+      res.json(result);
+    } catch (error) {
+      console.error('Error fetching file content:', error);
+      res.status(500).json({ error: 'Failed to fetch file content: ' + error.message });
     }
   }
 };
 
 /**
- * Helper to limit tree depth and size
+ * Helper function to limit tree depth and file count
  */
 function limitTreeDepth(tree, maxDepth, maxFiles, currentDepth = 0, fileCount = { count: 0 }) {
-  if (!tree || currentDepth >= maxDepth || fileCount.count >= maxFiles) {
-    return null;
+  if (currentDepth > maxDepth) {
+    return {
+      name: tree.name,
+      type: tree.type,
+      path: tree.path,
+      truncated: true
+    };
   }
 
-  if (tree.children) {
-    tree.children = tree.children
-      .filter(child => fileCount.count < maxFiles)
-      .map(child => {
-        fileCount.count++;
-        return child.type === 'tree'
-          ? limitTreeDepth(child, maxDepth, maxFiles, currentDepth + 1, fileCount)
-          : child;
-      })
-      .filter(Boolean);
+  if (tree.type === 'blob') {
+    fileCount.count++;
+    if (fileCount.count > maxFiles) {
+      return null;
+    }
+    return tree;
   }
 
-  return tree;
+  if (!tree.children) {
+    return tree;
+  }
+
+  const limitedChildren = [];
+  for (const child of tree.children) {
+    if (fileCount.count > maxFiles) break;
+    
+    const limitedChild = limitTreeDepth(child, maxDepth, maxFiles, currentDepth + 1, fileCount);
+    if (limitedChild) {
+      limitedChildren.push(limitedChild);
+    }
+  }
+
+  return {
+    ...tree,
+    children: limitedChildren,
+    truncated: tree.children.length > limitedChildren.length
+  };
 }
 
 module.exports = projectController;

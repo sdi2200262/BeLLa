@@ -20,10 +20,13 @@ router.get('/data', projectController.getProjectData);
 // Get file tree
 router.get('/tree', projectController.getFileTree);
 
+// Get file content
+router.get('/content', projectController.getFileContent);
+
 // Add project (auth required)
 router.post('/', auth, projectController.addProject);
 
-// Archive project (auth required)
+// Delete project (auth required)
 router.delete('/:id', auth, projectController.deleteProject);
 
 module.exports = router; 

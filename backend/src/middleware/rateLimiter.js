@@ -1,4 +1,5 @@
 const rateLimit = require('express-rate-limit');
+const cacheService = require('../services/cacheService');
 const NodeCache = require('node-cache');
 
 /**
@@ -81,7 +82,7 @@ function trackSuspiciousActivity(req) {
   };
 
   // Update user tracking
-  if (req.user) {
+  if (req.user && req.user.id) {
     ipRecord.userIds.add(req.user.id);
     
     // If this IP is associated with too many users, it's suspicious
@@ -137,7 +138,7 @@ function trackSuspiciousActivity(req) {
  */
 const antiAbuse = (req, res, next) => {
   const ipRecord = trackSuspiciousActivity(req);
-  const userRecord = req.user ? abuseCache.get(`user:${req.user.id}`) : null;
+  const userRecord = req.user && req.user.id ? abuseCache.get(`user:${req.user.id}`) : null;
 
   if ((ipRecord.blocked && Date.now() < ipRecord.blockedUntil) ||
       (userRecord?.blocked && Date.now() < userRecord.blockedUntil)) {
@@ -201,27 +202,25 @@ const rateLimiters = {
 };
 
 /**
- * Response caching middleware
+ * Response caching middleware using centralized cache service
  */
-const responseCache = new NodeCache({
-  stdTTL: 300,  // 5 minutes default TTL
-  maxKeys: 1000 // Limit total cached responses
-});
-
 const cacheMiddleware = (duration = 300) => (req, res, next) => {
   if (req.method !== 'GET') return next();
 
-  const key = `${req.method}:${req.originalUrl}`;
-  const cached = responseCache.get(key);
+  const key = `response:${req.method}:${req.originalUrl}`;
+  const cached = cacheService.getRepoData(key);
 
   if (cached) {
-    return res.json(cached);
+    return res.json({
+      ...cached,
+      cached: true
+    });
   }
 
   const originalJson = res.json;
   res.json = function(data) {
     if (res.statusCode === 200) {
-      responseCache.set(key, data, duration);
+      cacheService.setRepoData(key, data, duration);
     }
     return originalJson.call(this, data);
   };
@@ -232,6 +231,5 @@ const cacheMiddleware = (duration = 300) => (req, res, next) => {
 module.exports = {
   antiAbuse,
   rateLimiters,
-  cacheMiddleware,
-  responseCache
+  cacheMiddleware
 }; 

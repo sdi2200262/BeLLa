@@ -1,15 +1,12 @@
 const mongoose = require('mongoose');
-const { Octokit } = require('octokit');
-
-const octokit = new Octokit({
-  auth: process.env.GITHUB_TOKEN
-});
 
 /**
  * Project Schema
- * Represents a GitHub repository project
+ * Simplified model that only stores essential information
+ * All project data is fetched from GitHub API when needed
  */
 const projectSchema = new mongoose.Schema({
+  // GitHub repository URL serves as the unique identifier
   repositoryUrl: {
     type: String,
     required: true,
@@ -18,102 +15,52 @@ const projectSchema = new mongoose.Schema({
     validate: {
       validator: url => /^https:\/\/github\.com\/[\w-]+\/[\w.-]+$/.test(url),
       message: 'Invalid GitHub repository URL'
-    }
+    },
+    index: true
   },
-  uploadedBy: {
+  
+  // GitHub username of the user who added this project
+  githubUsername: {
     type: String,
     required: true,
     trim: true,
     index: true
   },
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true,
-    index: true
-  },
-  status: {
-    type: String,
-    enum: ['active', 'error', 'archived'],
-    default: 'active',
-    index: true
-  },
+  
+  // Timestamp for caching purposes
   lastChecked: {
     type: Date,
-    default: Date.now,
-    index: true
-  },
-  metadata: {
-    stars: Number,
-    forks: Number,
-    lastCommit: Date,
-    language: String,
-    topics: [String],
-    error: String
+    default: Date.now
   }
 }, {
-  timestamps: true,
-  toJSON: { virtuals: true },
-  toObject: { virtuals: true }
+  timestamps: true
 });
 
-// Optimized indexes
-projectSchema.index({ userId: 1, status: 1, createdAt: -1 });
-projectSchema.index({ status: 1, lastChecked: 1 });
+// Index for efficient queries
+projectSchema.index({ githubUsername: 1, createdAt: -1 });
 
 /**
- * Check if metadata needs updating
- * Updates limited to every 6 hours
+ * Check if GitHub data needs refreshing
+ * Only fetch new data from GitHub API after 30 minutes
  */
-projectSchema.methods.shouldUpdateMetadata = function() {
+projectSchema.methods.shouldRefreshData = function() {
   if (!this.lastChecked) return true;
-  const hoursSinceLastCheck = (Date.now() - this.lastChecked) / (1000 * 60 * 60);
-  return hoursSinceLastCheck >= 6;
+  const minutesSinceLastCheck = (Date.now() - this.lastChecked) / (1000 * 60);
+  return minutesSinceLastCheck >= 30; // Refresh after 30 minutes
 };
 
 /**
- * Pre-save middleware
- * Validates repository URL before saving using GitHub API
+ * Extract owner and repo from GitHub URL
  */
-projectSchema.pre('save', async function(next) {
-  if (this.isNew || this.isModified('repositoryUrl')) {
-    try {
-      // Extract owner and repo from URL
-      const match = this.repositoryUrl.match(/github\.com\/([^\/]+)\/([^\/\s]+)/);
-      if (!match) {
-        this.status = 'error';
-        this.metadata = { ...this.metadata, error: 'Invalid GitHub repository URL format' };
-        return next();
-      }
+projectSchema.methods.parseRepoUrl = function() {
+  const match = this.repositoryUrl.match(/github\.com\/([^\/]+)\/([^\/\s]+)/);
+  if (!match) return null;
+  
+  return {
+    owner: match[1],
+    repo: match[2].replace(/\.git$/, '')
+  };
+};
 
-      const [_, owner, repo] = match;
-      
-      // Use GitHub API to validate repository
-      const { data } = await octokit.rest.repos.get({
-        owner,
-        repo: repo.replace('.git', '')
-      });
-
-      // Update metadata
-      this.metadata = {
-        stars: data.stargazers_count,
-        forks: data.forks_count,
-        lastCommit: data.pushed_at,
-        language: data.language,
-        topics: data.topics || []
-      };
-      this.status = 'active';
-
-    } catch (error) {
-      console.error('Error validating repository:', error);
-      this.status = 'error';
-      this.metadata = { 
-        ...this.metadata, 
-        error: error.status === 404 ? 'Repository not found' : 'Failed to validate repository'
-      };
-    }
-  }
-  next();
-});
-
+// Create and export the model
 module.exports = mongoose.model('Project', projectSchema); 

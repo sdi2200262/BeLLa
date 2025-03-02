@@ -1,19 +1,9 @@
 const jwt = require('jsonwebtoken');
-const NodeCache = require('node-cache');
-
-/**
- * Token verification cache to reduce JWT decoding overhead
- * 5 minute TTL, check every minute
- */
-const tokenCache = new NodeCache({
-  stdTTL: 300,
-  checkperiod: 60,
-  maxKeys: 1000 // Limit cache size for free tier
-});
+const cacheService = require('../services/cacheService');
 
 /**
  * Authentication middleware
- * Optimized for free tier with caching and rate limiting
+ * Simplified to work with minimal User model and centralized caching
  */
 const auth = async (req, res, next) => {
   try {
@@ -24,9 +14,31 @@ const auth = async (req, res, next) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
+    // Check if token is invalidated (from logout)
+    const invalidated = cacheService.getUserData(`token:${token}`);
+    if (invalidated && invalidated.invalid) {
+      res.clearCookie('token');
+      return res.status(401).json({ 
+        error: 'Invalid token',
+        message: 'Please log in again'
+      });
+    }
+
     // Check cache first
-    const cachedUser = tokenCache.get(token);
+    const cachedUser = cacheService.getUserData(`auth:${token}`);
     if (cachedUser) {
+      // Verify the token hasn't expired
+      const now = Math.floor(Date.now() / 1000);
+      if (cachedUser.exp && cachedUser.exp < now) {
+        // Token has expired, clear it
+        cacheService.clearUserCache(`auth:${token}`);
+        res.clearCookie('token');
+        return res.status(401).json({ 
+          error: 'Session expired',
+          message: 'Please log in again'
+        });
+      }
+      
       req.user = cachedUser;
       return next();
     }
@@ -36,7 +48,7 @@ const auth = async (req, res, next) => {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       
       // Cache successful verifications
-      tokenCache.set(token, decoded);
+      cacheService.setUserData(`auth:${token}`, decoded, 300); // 5 minutes
       req.user = decoded;
       next();
     } catch (error) {
@@ -56,8 +68,7 @@ const auth = async (req, res, next) => {
       });
     }
   } catch (error) {
-    // Clear cache on error
-    tokenCache.flushAll();
+    console.error('Authentication error:', error);
     res.status(500).json({ error: 'Authentication error' });
   }
 };

@@ -1,41 +1,11 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const NodeCache = require('node-cache');
-const bcrypt = require('bcrypt');
-
-/**
- * Cache Configuration
- */
-const CACHE_CONFIG = {
-  TOKEN: {
-    TTL: 7200,        // 2 hours
-    MAX_KEYS: 1000    // Maximum cached tokens
-  },
-  GITHUB: {
-    TTL: 300,         // 5 minutes
-    MAX_KEYS: 100     // Maximum cached GitHub responses
-  }
-};
-
-/**
- * Initialize caches
- */
-const tokenCache = new NodeCache({
-  stdTTL: CACHE_CONFIG.TOKEN.TTL,
-  maxKeys: CACHE_CONFIG.TOKEN.MAX_KEYS,
-  useClones: false
-});
-
-const githubCache = new NodeCache({
-  stdTTL: CACHE_CONFIG.GITHUB.TTL,
-  maxKeys: CACHE_CONFIG.GITHUB.MAX_KEYS,
-  useClones: false
-});
+const cacheService = require('../services/cacheService');
 
 /**
  * Auth Controller
- * Handles user authentication and session management
- * Optimized for free tier with caching and memory management
+ * Handles user authentication via GitHub OAuth
+ * Simplified to work with minimal User model
  */
 const authController = {
   // GitHub OAuth callback
@@ -47,7 +17,7 @@ const authController = {
       }
 
       // Check cache for GitHub data
-      const cachedData = githubCache.get(code);
+      const cachedData = cacheService.getUserData(`oauth:${code}`);
       if (cachedData) {
         return res.json(cachedData);
       }
@@ -58,40 +28,43 @@ const authController = {
         return res.status(400).json({ error: 'Failed to authenticate with GitHub' });
       }
 
-      // Find or create user
+      // Find or create user with just githubId
       let user = await User.findOne({ githubId: githubData.id });
       if (!user) {
         user = await User.create({
-          githubId: githubData.id,
-          username: githubData.login,
-          email: githubData.email || `${githubData.login}@users.noreply.github.com`,
-          password: await generateRandomPassword() // Required by schema
+          githubId: githubData.id
         });
+      } else {
+        // Update last login
+        await user.updateLastLogin();
       }
 
-      // Generate token with minimal payload
+      // Generate token with minimal payload including GitHub username
       const token = jwt.sign(
-        { id: user._id, username: user.username },
+        { 
+          id: user._id, 
+          githubId: user.githubId,
+          githubUsername: githubData.login // Include GitHub username in token
+        },
         process.env.JWT_SECRET,
         { expiresIn: '2h' }
       );
 
-      // Update last login
-      await user.updateLastLogin();
-
-      // Prepare response data
+      // Prepare response data with GitHub profile info
       const responseData = {
         user: {
           id: user._id,
-          username: user.username,
-          email: user.email,
-          role: user.role
+          githubId: user.githubId,
+          // Include GitHub profile data from the API response
+          username: githubData.login,
+          avatar: githubData.avatar_url,
+          name: githubData.name
         },
         token
       };
 
       // Cache successful response
-      githubCache.set(code, responseData);
+      cacheService.setUserData(`oauth:${code}`, responseData, 300); // 5 minutes TTL for OAuth codes
 
       // Set cookie with security options
       res.cookie('token', token, {
@@ -113,8 +86,8 @@ const authController = {
     try {
       const token = req.cookies.token || req.header('Authorization')?.replace('Bearer ', '');
       if (token) {
-        // Remove from cache
-        tokenCache.del(token);
+        // Invalidate token in cache
+        cacheService.setUserData(`token:${token}`, { invalid: true }, 7200); // 2 hours (token expiry)
       }
       res.clearCookie('token');
       res.json({ message: 'Logged out successfully' });
@@ -127,21 +100,23 @@ const authController = {
   // Get current user
   async getCurrentUser(req, res) {
     try {
-      const user = await User.findById(req.user.id)
-        .select('-password')
-        .lean()
-        .exec();
-
+      const user = await User.findById(req.user.id);
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
 
-      // Return minimal user data
+      // Get GitHub profile data from cache or API
+      const githubData = await getGitHubUserData(user.githubId);
+
+      // Return user data combined with GitHub profile
       res.json({
         id: user._id,
-        username: user.username,
-        email: user.email,
-        role: user.role
+        githubId: user.githubId,
+        lastLogin: user.lastLogin,
+        // Include GitHub profile data
+        username: githubData?.login || req.user.githubUsername,
+        name: githubData?.name,
+        avatar: githubData?.avatar_url
       });
     } catch (error) {
       console.error('Get user error:', error);
@@ -197,7 +172,17 @@ async function exchangeCodeForGitHubData(code) {
         )
       ]);
 
-      return userResponse.json();
+      const userData = await userResponse.json();
+      
+      // Cache the access token with the user's GitHub ID
+      if (userData && userData.id) {
+        cacheService.setUserData(`github_token:${userData.id}`, {
+          access_token: tokenData.access_token,
+          expires_at: Date.now() + (tokenData.expires_in || 28800) * 1000 // Default 8 hours
+        }, tokenData.expires_in || 28800);
+      }
+      
+      return userData;
     } catch (error) {
       console.error(`GitHub API attempt ${attempt} failed:`, error);
       if (attempt === MAX_RETRIES) return null;
@@ -209,16 +194,44 @@ async function exchangeCodeForGitHubData(code) {
 }
 
 /**
- * Generate random password for GitHub users
+ * Get GitHub user data from cache or API
  */
-async function generateRandomPassword() {
-  const length = 32;
-  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
-  let password = '';
-  for (let i = 0; i < length; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length));
+async function getGitHubUserData(githubId) {
+  // Check cache first
+  const cachedUser = cacheService.getUserData(`github_user:${githubId}`);
+  if (cachedUser) {
+    return cachedUser;
   }
-  return await bcrypt.hash(password, 10);
+  
+  // Get access token from cache
+  const tokenData = cacheService.getUserData(`github_token:${githubId}`);
+  if (!tokenData || !tokenData.access_token) {
+    return null;
+  }
+  
+  try {
+    // Fetch user data from GitHub API
+    const response = await fetch('https://api.github.com/user', {
+      headers: {
+        'Authorization': `Bearer ${tokenData.access_token}`,
+        'Accept': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`GitHub API error: ${response.status}`);
+    }
+    
+    const userData = await response.json();
+    
+    // Cache user data
+    cacheService.setUserData(`github_user:${githubId}`, userData, 3600); // 1 hour
+    
+    return userData;
+  } catch (error) {
+    console.error('Error fetching GitHub user data:', error);
+    return null;
+  }
 }
 
 module.exports = authController; 

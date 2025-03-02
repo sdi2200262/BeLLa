@@ -4,8 +4,8 @@ const cors = require('cors');
 const compression = require('compression');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
-const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/database');
+const { rateLimiters, antiAbuse, cacheMiddleware } = require('./middleware/rateLimiter');
 
 // Import routes
 const projectRoutes = require('./routes/projectRoutes');
@@ -20,7 +20,6 @@ const PORT = process.env.PORT || 3001;
  * Free Tier Optimizations
  */
 const LIMITS = {
-  REQUESTS_PER_HOUR: 300,    // Free tier request limit
   PAYLOAD_SIZE: '250kb',     // Reduced payload size
   MEMORY_THRESHOLD: 450,     // 450MB memory limit (512MB total)
   COMPRESSION_THRESHOLD: 1024, // Compress responses over 1KB
@@ -45,16 +44,11 @@ app.use((req, res, next) => {
 // Security
 app.use(helmet());
 
-// Rate limiting
-app.use(rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: LIMITS.REQUESTS_PER_HOUR,
-  message: {
-    error: 'Too many requests',
-    message: 'Please try again in an hour'
-  },
-  skip: (req) => req.path === '/health'
-}));
+// Global rate limiting
+app.use(rateLimiters.global);
+
+// Anti-abuse protection
+app.use(antiAbuse);
 
 // Compression
 app.use(compression({
@@ -90,11 +84,16 @@ app.use(cors({
 }));
 
 /**
- * Routes
+ * Routes with specific middleware
  */
-app.use('/api/projects', projectRoutes);
-app.use('/api/contributors', contributorsRoutes);
-app.use('/api/auth', authRoutes);
+// Apply burst rate limiter and caching to project routes
+app.use('/api/projects', rateLimiters.burst, cacheMiddleware(300), projectRoutes);
+
+// Apply caching to contributors routes
+app.use('/api/contributors', cacheMiddleware(600), contributorsRoutes);
+
+// Apply auth rate limiter to auth routes
+app.use('/api/auth', rateLimiters.auth, authRoutes);
 
 // Health check with memory monitoring
 app.get('/health', (req, res) => {
@@ -111,7 +110,7 @@ app.get('/health', (req, res) => {
     },
     tier: 'free',
     limits: {
-      requestsPerHour: LIMITS.REQUESTS_PER_HOUR,
+      requestsPerHour: rateLimiters.global.max,
       payloadSize: LIMITS.PAYLOAD_SIZE
     }
   });
